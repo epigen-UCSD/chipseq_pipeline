@@ -100,7 +100,7 @@ string[] chipqc( string fastq1, string fastq2, string bam, string align_log, str
 		// # if PICARDROOT is not defined, then look into ../shared/picard* (default picard dir. in bioconda)
 		sys if [ -f "$(which picard)" ]; then export PICARDROOT="$(dirname $(which picard))/../share/picard"*; fi
 
-		sys $script_dir/chipqc/run_chipqc_single_lib.py \
+		sys $script_dir/chipqc/run_chipqc.py \
 		    --workdir $o_dir \
 		    --outdir $o_dir \
 		    --outprefix $prefix_basename \
