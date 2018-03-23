@@ -11,8 +11,6 @@ help == CHIPQC settings
 tss_enrich 	:= "" 		help TSS enrichment bed for chipqc.
 prom 		:= ""		help Promoter bed (promoter region file) for chipqc.
 enh 		:= ""		help Enhancer bed (enhancer region file) for chipqc.
-reg2map_bed 	:= ""		help Reg2map_bed (file of regions used to generate reg2map signals) for chipqc.
-roadmap_meta 	:= ""		help Roadmap metadata for chipqc.
 
 mem_chipqc 	:= "20G"	help Max. memory for CHIPQC (default: 20G).
 wt_chipqc	:= "47h"	help Walltime for CHIPQC (default: 47h, 47:00:00).
@@ -26,9 +24,6 @@ void init_chipqc() {
 	tss_enrich 	= get_conf_val( tss_enrich,	["tss_enrich"] )
 	prom 		= get_conf_val( prom,		["prom"] )
 	enh 		= get_conf_val( enh,		["enh"] )
-	reg2map 	= get_conf_val( reg2map,	["reg2map"] )
-	reg2map_bed 	= get_conf_val( reg2map_bed,	["reg2map_bed"] )
-	roadmap_meta 	= get_conf_val( roadmap_meta,	["roadmap_meta"] )
 
 	mem_chipqc 	= get_conf_val( mem_chipqc,	["mem_chipqc"] )
 	wt_chipqc	= get_conf_val( wt_chipqc,	["wt_chipqc"] )
@@ -38,9 +33,6 @@ void init_chipqc() {
 	print( "TSS enrichment bed\t\t: $tss_enrich\n" )
 	print( "Promoter bed for chipqc\t\t: $prom\n" )
 	print( "Enhancer bed for chipqc\t\t: $enh\n" )
-	print( "Reg2map for chipqc\t\t\t: $reg2map\n" )
-	print( "Reg2map_bed for chipqc\t\t: $reg2map_bed\n" )
-	print( "Roadmap metadata for chipqc\t: $roadmap_meta\n" )
 	print( "Max. memory for CHIPQC\t\t\t: $mem_chipqc\n")
 	print( "Walltime for CHIPQC\t\t\t: $wt_chipqc\n")
 }
@@ -56,9 +48,6 @@ bool chk_chipqc() {
 	//if ( blacklist == "" ) 	{ print("Warning: Blacklist bed is missing ( '-blacklist' )!\n"); disable_chipqc  = true }
 	//if ( prom == "" ) 	{ print("Warning: Promoter bed is missing ( '-prom' )!\n"); disable_chipqc  = true }
 	//if ( enh == "" ) 	{ print("Warning: Enhancer bed is missing ( '-enh' )!\n"); disable_chipqc  = true }
-	// if ( reg2map == "" ) 	{ print("Warning: reg2map is missing ( '-reg2map' )!\n"); disable_chipqc  = true }
-	// if ( reg2map_bed == "" ){ print("Warning: reg2map_bed is missing ( '-reg2map_bed' )!\n"); disable_chipqc  = true }
-	// if ( roadmap_meta == "" ) { print("Warning: Roadmap metadata are missing ( '-roadmap_meta' )!\n"); disable_chipqc  = true }
 
 	if ( disable_chipqc ) {
 		print("\nDisabling CHIPQC...\n")
