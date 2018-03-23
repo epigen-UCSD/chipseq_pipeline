@@ -300,33 +300,6 @@ def get_encode_complexity_measures(pbc_output):
 
     return results
 
-def get_picard_complexity_metrics(aligned_bam, prefix):
-    '''
-    Picard EsimateLibraryComplexity
-    '''
-    out_file = '{0}.picardcomplexity.qc'.format(prefix)
-    get_gc_metrics = ('java -Xmx4G -jar '
-                      '{2}/picard.jar '
-                      'EstimateLibraryComplexity INPUT={0} OUTPUT={1} '
-                      'VERBOSITY=ERROR '
-                      'QUIET=TRUE').format(aligned_bam,
-                                           out_file,
-                                           os.environ['PICARDROOT'])
-    os.system(get_gc_metrics)
-
-    # Extract the actual estimated library size
-    header_seen = False
-    est_library_size = 0
-    with open(out_file, 'rb') as fp:
-        for line in fp:
-            if header_seen:
-                est_library_size = int(float(line.strip().split()[-1]))
-                break
-            if 'ESTIMATED_LIBRARY_SIZE' in line:
-                header_seen = True
-
-    return est_library_size
-
 
 def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge=2000,
                   processes=8, greenleaf_norm=True):
@@ -1245,8 +1218,6 @@ def main():
                                          OUTPUT_PREFIX)
 
     # Library complexity:  NRF, PBC1, PBC2
-    picard_est_library_size = get_picard_complexity_metrics(ALIGNED_BAM,
-                                                            OUTPUT_PREFIX)
     encode_lib_metrics = get_encode_complexity_measures(PBC_LOG)
 
     # Filtering metrics: duplicates, map quality
