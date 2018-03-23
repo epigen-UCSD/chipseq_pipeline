@@ -757,38 +757,6 @@ def read_picard_histogram(data_file):
 
     return data
 
-
-def fragment_length_qc(data):
-    results = []
-
-    NFR_UPPER_LIMIT = 150
-    MONO_NUC_LOWER_LIMIT = 150
-    MONO_NUC_UPPER_LIMIT = 300
-
-    # % of NFR vs res
-    percent_nfr = data[:NFR_UPPER_LIMIT].sum() / data.sum()
-    results.append(
-        QCGreaterThanEqualCheck('Fraction of reads in NFR', 0.4)(percent_nfr))
-
-    # % of NFR vs mononucleosome
-    percent_nfr_vs_mono_nuc = (
-        data[:NFR_UPPER_LIMIT].sum() /
-        data[MONO_NUC_LOWER_LIMIT:MONO_NUC_UPPER_LIMIT + 1].sum())
-    results.append(
-        QCGreaterThanEqualCheck('NFR / mono-nuc reads', 2.5)(
-            percent_nfr_vs_mono_nuc))
-
-    # peak locations
-    peaks = find_peaks_cwt(data[:, 1], np.array([25]))
-    nuc_range_metrics = [('Presence of NFR peak', 20, 90),
-                         ('Presence of Mono-Nuc peak', 120, 250),
-                         ('Presence of Di-Nuc peak', 300, 500)]
-    for range_metric in nuc_range_metrics:
-        results.append(QCHasElementInRange(*range_metric)(peaks))
-
-    return results
-
-
 def fragment_length_plot(data_file, peaks=None):
     try:
         data = read_picard_histogram(data_file)
@@ -1261,12 +1229,6 @@ def main():
     reads_peaks, fract_peaks = get_signal_to_noise(FINAL_BED,
                           DNASE,BLACKLIST,PROM,ENH,PEAKS)
 
-    # Also need to run n-nucleosome estimation
-    if paired_status == 'Paired-ended':
-        nucleosomal_qc = fragment_length_qc(read_picard_histogram(insert_data))
-    else:
-        nucleosomal_qc = ''
-
     # Peak metrics
     peak_counts = get_peak_counts(PEAKS) # raw peaks only 
     raw_peak_summ, raw_peak_dist = get_region_size_metrics(PEAKS)
@@ -1342,7 +1304,6 @@ def main():
 
         # Fragment length statistics
         ('fraglen_dist', fragment_length_plot(insert_data)),
-        ('nucleosomal', nucleosomal_qc),
 
         # Peak metrics
         ('peak_counts', peak_counts),
