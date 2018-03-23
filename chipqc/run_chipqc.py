@@ -278,27 +278,6 @@ def plot_gc(data_file):
     return b64encode(plot_img.getvalue())
 
 
-def run_preseq(bam_w_dups, prefix):
-    '''
-    Runs preseq. Look at preseq data output to get PBC/NRF.
-    '''
-    # First sort because this file no longer exists...
-    sort_bam = 'samtools sort -o {1}.sorted.bam -T {1} -@ 2 {0}'.format(
-        bam_w_dups, prefix)
-    os.system(sort_bam)
-
-    logging.info('Running preseq...')
-    preseq_data = '{0}.preseq.dat'.format(prefix)
-    preseq_log = '{0}.preseq.log'.format(prefix)
-    preseq = ('preseq lc_extrap '
-              '-P -B -o {0} {1}.sorted.bam -v 2> {2}').format(preseq_data,
-                                                              prefix,
-                                                              preseq_log)
-    logging.info(preseq)
-    os.system(preseq)
-    os.system('rm {0}.sorted.bam'.format(prefix))
-    return preseq_data, preseq_log
-
 
 def get_encode_complexity_measures(pbc_output):
     '''
@@ -347,36 +326,6 @@ def get_picard_complexity_metrics(aligned_bam, prefix):
                 header_seen = True
 
     return est_library_size
-
-
-def preseq_plot(data_file):
-    '''
-    Generate a preseq plot
-    '''
-    try:
-        data = np.loadtxt(data_file, skiprows=1)
-    except IOError:
-        return ''
-    data /= 1e6  # scale to millions of reads
-
-    fig = plt.figure()
-
-    # Plot the average expected yield
-    plt.plot(data[:, 0], data[:, 1], 'r-')
-
-    # Plot confidence intervals
-    ci_lower, = plt.plot(data[:, 0], data[:, 2], 'b--')
-    ci_upper, = plt.plot(data[:, 0], data[:, 3], 'b--')
-    plt.legend([ci_lower], ['95% confidence interval'], loc=4)
-
-    plt.title('Preseq estimated yield')
-    plt.xlabel('Sequenced fragments [ millions ]')
-    plt.ylabel('Expected distinct fragments [ millions ]')
-
-    plot_img = BytesIO()
-    fig.savefig(plot_img, format='png')
-
-    return b64encode(plot_img.getvalue())
 
 
 def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge=2000,
@@ -922,7 +871,7 @@ html_template = Template("""
 <html>
 
 <head>
-  <title>{{ sample['name'] }} - ATAqC report</title>
+  <title>{{ sample['name'] }} - Chipqc report</title>
   <style>
   .qc_table{
       font-family:"Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
@@ -959,7 +908,7 @@ html_template = Template("""
 </head>
 
 <body>
-  <h2>ATAqC</h2>
+  <h2>Chipqc</h2>
 
 
   <h2>Sample Information</h2>
@@ -1074,21 +1023,6 @@ applied on the data. After examining all reads a Histogram is built of
 [#reads in duplicate set -> #of duplicate sets]; all bins that contain exactly 
 one duplicate set are then removed from the Histogram as outliers before library 
 size is estimated.
-
-
-  <h3>Yield prediction</h3>
-  {% if sample['yield_prediction'] == 'Tm9uZQ==' %}
-    {{ 'Preseq did not converge (or failed in some other way)'}}
-  {% else %}
-    {{ inline_img(sample['yield_prediction']) }}
-  {% endif %}
-<pre>
-Preseq performs a yield prediction by subsampling the reads, calculating the
-number of distinct reads, and then extrapolating out to see where the
-expected number of distinct reads no longer increases. The confidence interval
-gives a gauge as to the validity of the yield predictions.
-</pre>
-
 
   <h2>Fragment length statistics</h2>
   {{ inline_img(sample['fraglen_dist']) }}
@@ -1310,11 +1244,9 @@ def main():
                                          REF,
                                          OUTPUT_PREFIX)
 
-    # Library complexity: Preseq results, NRF, PBC1, PBC2
+    # Library complexity:  NRF, PBC1, PBC2
     picard_est_library_size = get_picard_complexity_metrics(ALIGNED_BAM,
                                                             OUTPUT_PREFIX)
-    preseq_data, preseq_log = run_preseq(ALIGNED_BAM, OUTPUT_PREFIX) # SORTED BAM
-
     encode_lib_metrics = get_encode_complexity_measures(PBC_LOG)
 
     # Filtering metrics: duplicates, map quality
@@ -1436,7 +1368,6 @@ def main():
         # Library complexity statistics
         ('encode_lib_complexity', encode_lib_metrics),
         ('picard_est_library_size', picard_est_library_size),
-        ('yield_prediction', preseq_plot(preseq_data)),
 
         # Fragment length statistics
         ('fraglen_dist', fragment_length_plot(insert_data)),
