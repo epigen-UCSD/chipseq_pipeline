@@ -403,8 +403,8 @@ void align() {
 
 void jsd() { // plot fingerprint
 	if ( no_jsd ) return
-	if ( filt_bam.hasKey("ctl1") && filt_bam.hasKey("rep1") ) {
-		nth_sam_idx := min(2,nth)
+
+                nth_sam_idx := min(2,nth)
 
 		string[] filt_bams, labels
 		for ( int rep=1; rep <= get_num_rep( 0 ); rep++) { // IP replicate
@@ -453,7 +453,6 @@ void jsd() { // plot fingerprint
 		add_file_to_table( jsd_png, "QC and logs/Fingerprint JSD Plot")
 
 		print( "\n== Done jsd()\n" )
-	}
 }
 
 void align( int ctl, int rep, int nth_rep ) {
