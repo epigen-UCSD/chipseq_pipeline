@@ -415,40 +415,17 @@ void jsd() { // plot fingerprint
 
 			samtools_index(filt_bam_, group, nth_sam_idx)
 		}
-		group_ctl1 := get_group_name( 1, 1 ) // 1st control replicate
 
-		ctl_filt_bam1 := filt_bam{group_ctl1}
-		labels.add(group_ctl1)
-
-		samtools_index(ctl_filt_bam1, group_ctl1, nth_sam_idx)
-		wait
 
 		nth_jsd := min(4,nth)
 
-		string jsd_qc_all_reps
-		(jsd_png, jsd_qc_all_reps) = \
-			jsd(filt_bams, ctl_filt_bam1, labels, "$out_dir/qc", nth_jsd )
+                string jsd_qc_lib, jsd_qc_dat
+                (jsd_png, jsd_qc_lib, jsd_qc_dat) =                                    \
+			jsd_single_lib(filt_bam, label, "$out_dir/qc", nth_jsd )
 		wait
-		// get each line in jsd_qc_all_reps and save to individual qc file for each rep
-		lines := jsd_qc_all_reps.readLines()
-		for ( int rep=1; rep <= get_num_rep( 0 ); rep++) { // IP replicate
-			arr := lines[rep].trim().split("\t")
-			string[] arr_without_col_1 // remove sample name from log file
-			for ( int i=1; i < arr.size(); i++) {
-				arr_without_col_1.add(arr[i])
-			}
-			group := get_group_name( 0, rep )
-			long := get_long_group_name( 0, rep )
-			filt_bam_ := filt_bam{group}
+            
+                add_file_to_table( jsd_qc_lib, "QC and logs/$long/JS Distance" )
 
-			prefix := replace_dir( rm_ext( filt_bam_, "bam" ), "$out_dir/qc/rep$rep" )
-			jsd_qc_ := "$prefix.jsd.qc"
-			if ( jsd_qc_ <- jsd_qc_all_reps ) {
-				jsd_qc_.write( arr_without_col_1.join("\t") )
-			}
-			jsd_qc{group} = jsd_qc_
-			add_file_to_table( jsd_qc_, "QC and logs/$long/JS Distance" )
-		}
 		// jsd_qc_all_reps.rm()
 		add_file_to_table( jsd_png, "QC and logs/Fingerprint JSD Plot")
 

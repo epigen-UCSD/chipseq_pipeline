@@ -834,8 +834,8 @@ string[] jsd_single_lib( string bam, string label,  \
 	prefix 	:= "$o_dir/"+ (title ? ("$title"+"_") : "" ) + "jsd"
 	png 	:= "$prefix.png"
 	qc 	:= "$prefix.qc"
-	dat 	:= "$prefix.dat"        
-	in 	:= [bam] 
+	dat 	:= "$prefix.dat"
+	in 	:= [bam]
 	out 	:= [png, qc, dat]
 	// fraglen_param := fraglen <= 0 ? "" : "--minFragmentLength $fraglen"
 
@@ -848,13 +848,13 @@ string[] jsd_single_lib( string bam, string label,  \
 	tid := task( out<-in ) {
 		sys $shcmd_init
 		sys plotFingerprint -b $bam \
-			--labels $label \                
-			-T "Fingerprints of sample" \                
-			--minMappingQuality $mapq_thresh \
+			--labels $label \
+			-T "Fingerprints of sample" \-
+			-minMappingQuality $mapq_thres\
 			--blackListFileName $blacklist \
 			--numberOfProcessors $nth_jsd \
-                        --outRawCounts $dat \
-			--plotFile $png                
+			--outRawCounts $dat \
+			--plotFile $png
 		sys $shcmd_finalize
 	}
 
