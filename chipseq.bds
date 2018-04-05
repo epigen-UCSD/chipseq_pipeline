@@ -1555,7 +1555,7 @@ void naive_overlap() {
 void do_idr() {
 
 	if ( !is_final_stage_idr() ) return
-	if ( is_histone_chipseq() ) return
+	if ( is_histone_chipseq() ) return // why no idr for histone chipseq
 	if ( !peak_exists() ) return // if no peaks from peak caller exit
 
 	// peak caller
