@@ -1513,7 +1513,7 @@ void naive_overlap() {
 		add_file_to_report( peak_overlap_opt, "opt. overlap peak", "", "Peaks/"+peak_caller.toUpper()+"/Naive overlap/Optimal set/Overlapping peak" )
 		add_file_to_report( peak_overlap_consv, "consv. overlap peak", "", "Peaks/"+peak_caller.toUpper()+"/Naive overlap/Conservative set/Overlapping peak" )
 	}
-	// FRiP (fraction of reads in peak)
+	// FRiP (fraction of reads in peak), DUP calculated (in chipqc) 
 	if ( !is_input_peak() && xcor_qc ) {
 		string{} fraglen_true
 		real fraglen_sum = 0.0 // temp var.
