@@ -425,8 +425,6 @@ void jsd() { // plot fingerprint
 			jsd_single_lib(filt_bam, labels, "$out_dir/qc", nth_jsd )
 		wait
             
-                add_file_to_table( jsd_qc_lib, "QC and logs/$long/JS Distance" )
-
 		// jsd_qc_all_reps.rm()
 		add_file_to_table( jsd_png, "QC and logs/Fingerprint JSD Plot")
 
