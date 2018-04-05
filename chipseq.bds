@@ -31,8 +31,9 @@ no_browser_tracks := false 	help Disable generation of genome browser tracks (wo
 pe_xcor_only 	:= false 	help (PE ONLY) Align R1 of paired end fastqs only and for cross-correlation analysis. All other analyses and QCs will be disabled.
 pe_no_trim_fastq := false 	help (PE ONLY) No fastq trimming and use PE tagAlign for cross-correlation analysis.
 no_jsd 		:= false 	help Disable JSD plot generation
-disable_gb_peak := true // disable gapped/broad peak generation
-
+disable_gb_peak := true         help Disable gapped/broad peak generation
+no_chipqc 	:= false        help Disable advanced chipseq qc 
+                                                                                                                                                              
 help() // print help and exit if no parameters are given
 
 include "modules/pipeline_template.bds"
