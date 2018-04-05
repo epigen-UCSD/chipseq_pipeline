@@ -847,7 +847,7 @@ void align_PE( int ctl, int rep, int nth_rep ) {
 
 void chipqc() {
 
-	if ( no_chipqc || align ) return
+	if ( no_chipqc ) return
 	if ( is_input_peak() ) return
 
 	for (int rep=1; rep<=get_num_rep(); rep++) {
