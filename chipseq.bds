@@ -882,7 +882,7 @@ void chipqc( int rep ) {
 
 		string idr_chipqc, peak_
 
-		if ( !enable_idr ) {
+		if ( !is_final_stage_idr()  ) {
 			idr_chipqc = ""
 			peak_ = peak_overlap
 		}
