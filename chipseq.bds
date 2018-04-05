@@ -422,7 +422,7 @@ void jsd() { // plot fingerprint
 
                 string jsd_qc_lib, jsd_qc_dat
                 (jsd_png, jsd_qc_lib, jsd_qc_dat) =                                    \
-			jsd_single_lib(filt_bam, label, "$out_dir/qc", nth_jsd )
+			jsd_single_lib(filt_bam, labels, "$out_dir/qc", nth_jsd )
 		wait
             
                 add_file_to_table( jsd_qc_lib, "QC and logs/$long/JS Distance" )
