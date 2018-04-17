@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -q condo
 #PBS -N chipseq
-#PBS -l nodes=1:ppn=16
+#PBS -l nodes=1:ppn=8
 #PBS -l walltime=08:00:00
 #PBS -o /home/zhc268/logs/chipseq.out
 #PBS -e /home/zhc268/logs/chipseq.err
@@ -15,8 +15,7 @@
 # Step 2: peak calling 
 
 source activate aquas_chipseq
-WORKDIR="/home/zhc268/scratch/outputs/"
-FASTQDIR="/home/zhc268/data/seqdata"
+
 
 
 # select libs 
@@ -88,7 +87,7 @@ wait
 #results_transfer.sh $INPREFIX
 
 
-#eg: qsub  -t 0-3 -v samples="/home/zhc268/data/logs/run_2018-03-14_AVD_chip.txt"  ~/workflows/pbs/runPipeline_chipseq_twoSteps.pbs 
+#eg: qsub  -t 0-2 -v samples="$(pwd)/samples.txt",FASTADIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 
 
 
 

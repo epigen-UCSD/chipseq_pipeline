@@ -1,0 +1,3 @@
+treat1	hg38 false
+treat2	hg38 false
+input	hg38 true
