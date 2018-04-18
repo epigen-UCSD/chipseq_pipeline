@@ -850,7 +850,7 @@ string[] jsd_single_lib( string bam, string label,  \
 		sys plotFingerprint -b $bam \
 			--labels $label \
 			-T "Fingerprints of sample" \
-			-minMappingQuality $mapq_thres \
+			-minMappingQuality $mapq_thresh \
 			--blackListFileName $blacklist \
 			--numberOfProcessors $nth_jsd \
 			--outRawCounts $dat \
