@@ -4,6 +4,7 @@ samples=$1
 PBS_ARRAYID=$2
 FASTQDIR=$3
 WORKDIR=$4
+PBS_NP=1
 
 # select libs 
 samplenames=(`cat $samples`)
