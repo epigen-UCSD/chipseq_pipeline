@@ -819,7 +819,7 @@ string[] jsd( string[] bams, string ctl_bam1, string[] labels, \
 			-T "Fingerprints of different samples" \
 			--blackListFileName $blacklist \
 			--numberOfProcessors $nth_jsd \
-			--outRawCounts $dat \                
+			--outRawCounts $dat \
 			--plotFile $png
 
 		sys $shcmd_finalize
