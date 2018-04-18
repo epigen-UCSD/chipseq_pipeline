@@ -29,7 +29,6 @@ fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
 
 # parameters
 type="histone"
-final_stage="xcor"
 true_rep="true"
 no_pseudo_rep="true"
 outdir="${WORKDIR}${INPREFIX}_chip"; mkdir -p $outdir
@@ -39,6 +38,8 @@ outdir="${WORKDIR}${INPREFIX}_chip"; mkdir -p $outdir
 ############################################################
 fastq_input="-fastq1_1 ${fastq1} -fastq1_2 ${fastq2}"
 [[ "$ctl" = true ]] && fastq_input="-ctl_fastq1_1 ${fastq1} -ctl_fastq1_2 ${fastq2}"
+
+final_stage="xcor"
 
 # run pipeline
 bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \

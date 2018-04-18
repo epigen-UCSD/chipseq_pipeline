@@ -30,7 +30,7 @@ no_gpeak_filt 	:= false 	help Disable gapped peak filtering through narrow peak 
 no_browser_tracks := false 	help Disable generation of genome browser tracks (workaround for bzip2 shared library issue).
 pe_xcor_only 	:= false 	help (PE ONLY) Align R1 of paired end fastqs only and for cross-correlation analysis. All other analyses and QCs will be disabled.
 pe_no_trim_fastq := false 	help (PE ONLY) No fastq trimming and use PE tagAlign for cross-correlation analysis.
-no_jsd 		:= false 	help Disable JSD plot generation
+no_jsd 		:= true 	help Disable JSD plot generation
 disable_gb_peak := true // disable gapped/broad peak generation
 
 help() // print help and exit if no parameters are given
