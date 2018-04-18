@@ -1,22 +1,9 @@
-#!/bin/bash
-#PBS -q condo
-#PBS -N chipseq
-#PBS -l nodes=1:ppn=8
-#PBS -l walltime=08:00:00
-#PBS -o /home/zhc268/logs/chipseq.out
-#PBS -e /home/zhc268/logs/chipseq.err
-#PBS -V
-#PBS -M zhangc518@gmail.com
-#PBS -m abe
-#PBS -A epigen-group
-
-## RUN chipseq using two steps
-# Step 1: process tr & ctl equally before peak calling
-# Step 2: peak calling 
-
 source activate aquas_chipseq
-
-
+# input
+samples=$1
+PBS_ARRAYID=$2
+FASTQDIR=$3
+WORKDIR=$4
 
 # select libs 
 samplenames=(`cat $samples`)
@@ -87,7 +74,7 @@ wait
 #results_transfer.sh $INPREFIX
 
 
-#eg: qsub  -t 0-2 -v samples="$(pwd)/samples.txt",FASTADIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 
+#eg: bash  ./runPipeline_chipseq_twoSteps.sh $(pwd)/samples.txt 0 $(pwd) "/home/zhc268/scratch/outputs/"  
 
 
 
