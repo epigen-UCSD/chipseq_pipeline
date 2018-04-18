@@ -31,8 +31,9 @@ no_browser_tracks := false 	help Disable generation of genome browser tracks (wo
 pe_xcor_only 	:= false 	help (PE ONLY) Align R1 of paired end fastqs only and for cross-correlation analysis. All other analyses and QCs will be disabled.
 pe_no_trim_fastq := false 	help (PE ONLY) No fastq trimming and use PE tagAlign for cross-correlation analysis.
 no_jsd 		:= false 	help Disable JSD plot generation
-disable_gb_peak := true // disable gapped/broad peak generation
-
+disable_gb_peak := true         help Disable gapped/broad peak generation
+no_chipqc 	:= false        help Disable advanced chipseq qc 
+                                                                                                                                                              
 help() // print help and exit if no parameters are given
 
 include "modules/pipeline_template.bds"
@@ -52,6 +53,8 @@ include "modules/callpeak_macs2_chipseq.bds"
 include "modules/callpeak_naive_overlap.bds"
 include "modules/callpeak_idr.bds"
 include "modules/callpeak_blacklist_filter.bds"
+
+include "modules/chipqc.bds"                                                                                                                                                              
 
 //include "modules/signal.bds"
 
@@ -87,7 +90,8 @@ string{} sig_trk 	 	// signal tracks from deepTools or bamCoverage: map with key
 string{} pval_bigwig, fc_bigwig // signal track from macs2
 string num_peak_log
 
-
+string{} chipqc_qc
+    
 main()
 
 
@@ -99,7 +103,8 @@ void main() { // chipseq pipeline starts here
 
 	align() // align and postalign
 	jsd() // plot fingerprint and compute synthetic JS distance
-
+	chipqc()
+            
 	if ( !pe_xcor_only ) {
 		pool_tags() // make pooled tagaligns and choose appropriate control for each replicate
 		call_peaks() // call peaks in parallel (MACS2,SPP)
@@ -137,6 +142,7 @@ void read_conf_chipseq() {
 	idr_thresh 	= get_conf_val_real( idr_thresh, 	["idr_thresh"] )
 	use_pooled_ctl 	= get_conf_val_bool( use_pooled_ctl, 	["use_pooled_ctl"] )
 	true_rep 	= get_conf_val_bool( true_rep, 		["true_rep"] )
+	no_chipqc 	= get_conf_val_bool( no_chipqc, 		["no_chipqc"] )                                                                             
 	no_pseudo_rep	= get_conf_val_bool( no_pseudo_rep, 	["no_pseudo_rep"] )
 	no_xcor		= get_conf_val_bool( no_xcor, 		["no_xcor"] )
 	no_gpeak_filt	= get_conf_val_bool( no_gpeak_filt, 	["no_gpeak_filt"] )
@@ -190,6 +196,7 @@ void read_conf_chipseq() {
 	print( "Force to use pooled ctl\t\t\t: $use_pooled_ctl\n")
 	print( "Peak calling for true reps only\t\t: $true_rep\n" )
 	print( "No peak calling for self pseudo reps\t: $no_pseudo_rep\n" )
+	print( "No CHIPQC (advanced QC report)\t\t: $no_chipqc\n")            
 	print( "Disable cross-correlation analysis\t: $no_xcor\n" )
 	print( "Disable g. peak filt. thru. n. peak\t: $no_gpeak_filt\n" )
 	print( "Disable genome browser tracks\t: $no_browser_tracks\n" )	
@@ -268,9 +275,11 @@ void init_filetable() { // init file table labels in HTML report
 	add_label_to_table("Filtered peak")
 	add_label_to_table("Filtered gapped peak")
 	add_label_to_table("Filtered broad peak")
+	add_label_to_table("CHIPQC")                    
 	add_label_to_table("IDR plot")
 	add_label_to_table("Unthresholded IDR peak")
 
+                    
 	// add label to graphviz (short name, long name)
 
 	for (int i=1; i<=50; i++) {
@@ -298,7 +307,16 @@ void chk_param() {
 	if ( pe_xcor_only && !is_input_fastq(0,1) ) {
 		error("-pe_xcor_only is for fastqs only!\n")
 	}
-	if ( has_input_fastq() ) 	chk_align_bwa()	
+	if ( !no_chipqc ) {
+		no_chipqc = !chk_chipqc()
+	}
+        
+	if ( has_input_fastq() ) 	chk_align_bwa()
+	if ( !has_input_fastq() && !no_chipqc ) {
+		print("Warning: CHIPQC is available for fastq inputs only. Disabling CHIPQC...\n")
+		no_chipqc = true
+	}
+                                            
 	if ( is_final_stage_idr() ) 	chk_idr()
 	if ( is_final_stage_idr() || is_final_stage_peak() ) chk_callpeak_macs2()
 
@@ -386,8 +404,8 @@ void align() {
 
 void jsd() { // plot fingerprint
 	if ( no_jsd ) return
-	if ( filt_bam.hasKey("ctl1") && filt_bam.hasKey("rep1") ) {
-		nth_sam_idx := min(2,nth)
+
+                nth_sam_idx := min(2,nth)
 
 		string[] filt_bams, labels
 		for ( int rep=1; rep <= get_num_rep( 0 ); rep++) { // IP replicate
@@ -398,45 +416,19 @@ void jsd() { // plot fingerprint
 
 			samtools_index(filt_bam_, group, nth_sam_idx)
 		}
-		group_ctl1 := get_group_name( 1, 1 ) // 1st control replicate
 
-		ctl_filt_bam1 := filt_bam{group_ctl1}
-		labels.add(group_ctl1)
-
-		samtools_index(ctl_filt_bam1, group_ctl1, nth_sam_idx)
-		wait
 
 		nth_jsd := min(4,nth)
 
-		string jsd_qc_all_reps
-		(jsd_png, jsd_qc_all_reps) = \
-			jsd(filt_bams, ctl_filt_bam1, labels, "$out_dir/qc", nth_jsd )
+                string jsd_qc_lib, jsd_qc_dat
+                (jsd_png, jsd_qc_lib, jsd_qc_dat) =                                    \
+			jsd_single_lib(filt_bam, labels, "$out_dir/qc", nth_jsd )
 		wait
-		// get each line in jsd_qc_all_reps and save to individual qc file for each rep
-		lines := jsd_qc_all_reps.readLines()
-		for ( int rep=1; rep <= get_num_rep( 0 ); rep++) { // IP replicate
-			arr := lines[rep].trim().split("\t")
-			string[] arr_without_col_1 // remove sample name from log file
-			for ( int i=1; i < arr.size(); i++) {
-				arr_without_col_1.add(arr[i])
-			}
-			group := get_group_name( 0, rep )
-			long := get_long_group_name( 0, rep )
-			filt_bam_ := filt_bam{group}
-
-			prefix := replace_dir( rm_ext( filt_bam_, "bam" ), "$out_dir/qc/rep$rep" )
-			jsd_qc_ := "$prefix.jsd.qc"
-			if ( jsd_qc_ <- jsd_qc_all_reps ) {
-				jsd_qc_.write( arr_without_col_1.join("\t") )
-			}
-			jsd_qc{group} = jsd_qc_
-			add_file_to_table( jsd_qc_, "QC and logs/$long/JS Distance" )
-		}
+            
 		// jsd_qc_all_reps.rm()
 		add_file_to_table( jsd_png, "QC and logs/Fingerprint JSD Plot")
 
 		print( "\n== Done jsd()\n" )
-	}
 }
 
 void align( int ctl, int rep, int nth_rep ) {
@@ -849,6 +841,75 @@ void align_PE( int ctl, int rep, int nth_rep ) {
 		}
 
 		if ( is_final_stage_xcor() ) return
+	}
+}
+
+
+void chipqc() {
+
+	if ( no_chipqc ) return
+	if ( is_input_peak() ) return
+
+	for (int rep=1; rep<=get_num_rep(); rep++) {
+
+		if ( no_par ) chipqc( rep )
+		else 	  par chipqc( rep )
+	}
+
+	wait
+
+	print( "\n== Done chipqc()\n" )
+}
+
+void chipqc( int rep ) {
+
+    //	if ( true_rep ) {
+    //		print("Warning: CHIPQC cannot run with a flag -true_rep\n");
+    //		return
+    //	}
+	if ( no_dup_removal ) {
+		print("Warning: CHIPQC cannot run with the flag -no_dup_removal\n");
+		return
+	}
+
+	group := get_group_name( rep )
+	long  := get_long_group_name( rep )
+
+	qc_o_dir 	:= mkdir( "$out_dir/qc/$group" )
+	aln_o_dir 	:= mkdir( "$out_dir/align/$group" ) // create align output directory
+
+	if ( bam.hasKey(rep) ) {
+
+		string idr_chipqc, peak_
+
+		if ( !is_final_stage_idr()  ) {
+			idr_chipqc = ""
+			peak_ = peak_overlap
+		}
+		else if ( get_num_rep() == 1 ) 	{
+			idr_chipqc = idr_pr{1}
+			peak_ = idr_pr{rep}
+		}
+		else {
+			idr_chipqc = idr_opt
+			peak_ = idr_pr{rep}
+		}
+
+		string chipqc_html
+
+		if ( is_se( rep ) ) {
+
+			( chipqc_html, chipqc_qc{rep} ) = chipqc( fastq{rep}, "", bam{rep}, align_log{rep}, pbc_qc{rep}, \
+                                                               dup_qc{rep}, filt_bam{rep}, final_tag{rep}, pval_bigwig_001{rep}, peak{rep}, \
+				peak_overlap, idr_chipqc, qc_o_dir, group )
+		}
+		else {
+			( chipqc_html, chipqc_qc{rep} ) = chipqc( fastq{rep+",1"}, fastq{rep+",2"}, bam{rep}, align_log{rep}, pbc_qc{rep}, \
+							       dup_qc{rep}, filt_bam{rep}, final_tag{rep}, pval_bigwig_001{rep}, peak{rep}, \
+							       peak_overlap, idr_chipqc, qc_o_dir, group ) //only call peak from one lib not the overlapped 
+		}
+
+		add_file_to_report( chipqc_html, "CHIPQC\\nreport", group, "QC and logs/CHIPQC/$long/CHIPQC HTML report" )
 	}
 }
 
@@ -1452,7 +1513,7 @@ void naive_overlap() {
 		add_file_to_report( peak_overlap_opt, "opt. overlap peak", "", "Peaks/"+peak_caller.toUpper()+"/Naive overlap/Optimal set/Overlapping peak" )
 		add_file_to_report( peak_overlap_consv, "consv. overlap peak", "", "Peaks/"+peak_caller.toUpper()+"/Naive overlap/Conservative set/Overlapping peak" )
 	}
-	// FRiP (fraction of reads in peak)
+	// FRiP (fraction of reads in peak), DUP calculated (in chipqc) 
 	if ( !is_input_peak() && xcor_qc ) {
 		string{} fraglen_true
 		real fraglen_sum = 0.0 // temp var.
@@ -1494,7 +1555,7 @@ void naive_overlap() {
 void do_idr() {
 
 	if ( !is_final_stage_idr() ) return
-	if ( is_histone_chipseq() ) return
+	if ( is_histone_chipseq() ) return // why no idr for histone chipseq
 	if ( !peak_exists() ) return // if no peaks from peak caller exit
 
 	// peak caller
@@ -1626,8 +1687,8 @@ void log_number_of_peaks() {
 		lines += "ppr1\t"+get_num_lines( peak_ppr1{"$peak_caller"} )+"\n"
 	if ( peak_ppr2.hasKey("$peak_caller") ) \
 		lines += "ppr2\t"+get_num_lines( peak_ppr2{"$peak_caller"} )+"\n"
-	// if ( peak_overlap ) \
-	// 	lines += "overlap\t"+get_num_lines( peak_overlap )+"\n"
+	if ( peak_overlap ) \
+	 	lines += "overlap\t"+get_num_lines( peak_overlap )+"\n"
 	// if ( gpeak_overlap ) \
 	// 	lines += "overlap (gpeak)\t"+get_num_lines( gpeak_overlap )+"\n"
 	num_peak_log.write(lines)
@@ -1706,7 +1767,7 @@ void report() {
 
 string html_chipseq_QC() {
 
-	string[] flagstat_qcs, dup_qcs, flagstat_nodup_qcs, pbc_qcs, xcor_qcs, xcor_plots, jsd_qcs
+    string[] flagstat_qcs, dup_qcs, flagstat_nodup_qcs, pbc_qcs, xcor_qcs, xcor_plots, jsd_qcs, chipqc_qcs
 	string[] groups, groups_no_ctl
 
 	for ( int rep=1; rep <= get_num_rep(); rep++) {
@@ -1723,6 +1784,7 @@ string html_chipseq_QC() {
 		if ( flagstat_nodup_qc.hasKey( group ) )	flagstat_nodup_qcs 	+= flagstat_nodup_qc{group}
 		if ( pbc_qc.hasKey( group ) ) 		pbc_qcs			+= pbc_qc{group}
 		if ( jsd_qc.hasKey( group ) ) 		jsd_qcs			+= jsd_qc{group}
+		if ( chipqc_qc.hasKey( key ) )		chipqc_qcs		+= chipqc_qc{key}                
 	}
 	for ( int rep=1; rep<=get_num_rep(); rep++ ) {
 		if ( input_file_exists( 1, rep ) ) { // if control exists
@@ -1823,6 +1885,10 @@ string html_chipseq_QC() {
 		}
 	}
 
+	html += "<div style='float:left'>"
+	html += html_table_multiple_logs( "CHIPQC", false, "chipqc", groups, chipqc_qcs )
+	html += "</div>"
+
 	html += "</div><br>"
 	return html
 }
@@ -1847,10 +1913,10 @@ string html_chipseq_tracks() {
 		if ( fc_bigwig.hasKey( "rep$rep" ) )   { trk_types += "bigwig"; trk_names += "$title fc (rep$rep)"; trk_colors += color;   trk_files += fc_bigwig{"rep$rep"}   }
 	}
 	color = get_predefined_rgb_str( 0 ) // color for pooled reps
-	// if ( is_histone_chipseq() ) {
-	// 	if ( peak_overlap ) { trk_types += "hammock"; trk_names += "$title peak overlap"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap ) }
+	 if ( is_histone_chipseq() ) {
+	 	if ( peak_overlap ) { trk_types += "hammock"; trk_names += "$title peak overlap"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap ) }
 	// 	if ( gpeak_overlap ) { trk_types += "hammock"; trk_names += "$title gpeak overlap"; trk_colors += color; trk_files += peak_to_hammock( gpeak_overlap ) }
-	// }
+	}
 	if ( peak_overlap_opt ) {trk_types += "hammock"; trk_names += "$title peak overlap (opt. set)"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap_opt ) }
 	if ( peak_overlap_consv ) {trk_types += "hammock"; trk_names += "$title peak overlap (cons. set)"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap_consv ) }
 	for (int rep=1; rep<=get_num_rep(); rep++) {
