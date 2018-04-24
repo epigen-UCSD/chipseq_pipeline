@@ -25,8 +25,8 @@ outdir="${WORKDIR}${INPREFIX}_chip"; mkdir -p $outdir
 # Step 1
 ############################################################
 fastq_input="-fastq1_1 ${fastq1} -fastq1_2 ${fastq2}"
-#final_stage="xcor"
-final_stage="filt_bam"
+final_stage="xcor"
+#final_stage="filt_bam"
 
 
 [[ "$ctl" = true ]] && fastq_input="-ctl_fastq1_1 ${fastq1} -ctl_fastq1_2 ${fastq2}"
