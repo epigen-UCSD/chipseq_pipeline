@@ -767,7 +767,7 @@ void align_PE( int ctl, int rep, int nth_rep ) {
 	string tag_, bedpe, tag_R1
 	
 	if ( is_input_filt_bam( ctl, rep ) || is_input_bam( ctl, rep ) || is_input_fastq( ctl, rep ) ) {
-		if ( ctl==0 && bam_R1 ) {
+		if (  bam_R1 ) {
 			tag_R1 = bam_to_tag( bam_R1, aln_o_dir, group )
 			add_file_to_report( tag_R1, "tag-align-R1", group, "Alignment/$long/Tag-align R1" )
 		}
@@ -830,7 +830,7 @@ void align_PE( int ctl, int rep, int nth_rep ) {
 			}
 			// wait
 		}
-		if ( !no_xcor && ctl==0 ) {
+		if ( !no_xcor  ) {
 			string subsampled_tag_xcor
 			if ( tag_R1 ) {
 				subsampled_tag_xcor = subsample_tag( tag_R1, parse_number( subsample_xcor ), true, aln_o_dir, group )
