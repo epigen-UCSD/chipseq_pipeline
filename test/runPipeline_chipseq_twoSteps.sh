@@ -17,7 +17,6 @@ fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
 
 # parameters
 type="histone"
-final_stage="xcor"
 true_rep="true"
 no_pseudo_rep="true"
 outdir="${WORKDIR}${INPREFIX}_chip"; mkdir -p $outdir
@@ -26,6 +25,10 @@ outdir="${WORKDIR}${INPREFIX}_chip"; mkdir -p $outdir
 # Step 1
 ############################################################
 fastq_input="-fastq1_1 ${fastq1} -fastq1_2 ${fastq2}"
+#final_stage="xcor"
+final_stage="filt_bam"
+
+
 [[ "$ctl" = true ]] && fastq_input="-ctl_fastq1_1 ${fastq1} -ctl_fastq1_2 ${fastq2}"
 
 # run pipeline
@@ -49,10 +52,14 @@ wait
 
 ctl_id=$(cat $samples | grep true -n |cut -d':' -f1)
 ctl_id=$[$ctl_id-1] #0-based index
+ctl_name=${samplenames[${ctl_id}*3]}
+input_dir="${WORKDIR}${ctl_name}_chip/align";
 ctl_prefix="$input_dir/ctl1/${samplenames[${ctl_id}*3]}" #index start from 0
-tr_prefix="$input_dir/rep1/${samplenames[${PBS_ARRAYID}*3]}" #index start from 0
-tag_suffix="_R1.PE2SE.nodup.tagAlign.gz"
-tag_input="-tag ${tr_prefix}${tag_suffix} -ctl_tag ${ctl_prefix}${tag_suffix}"
+tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*3]}" #index start from 0
+#tag_suffix="_R1.PE2SE.nodup.tagAlign.gz"
+tag_suffix="_R1.PE2SE.nodup.bam"
+#tag_input="-tag ${tr_prefix}${tag_suffix} -ctl_tag ${ctl_prefix}${tag_suffix}"
+tag_input="-filt_bam ${tr_prefix}${tag_suffix} -ctl_filt_bam ${ctl_prefix}${tag_suffix}"
 
 # run pipeline
 bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \

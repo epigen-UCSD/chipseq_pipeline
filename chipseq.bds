@@ -30,7 +30,7 @@ no_gpeak_filt 	:= false 	help Disable gapped peak filtering through narrow peak 
 no_browser_tracks := false 	help Disable generation of genome browser tracks (workaround for bzip2 shared library issue).
 pe_xcor_only 	:= false 	help (PE ONLY) Align R1 of paired end fastqs only and for cross-correlation analysis. All other analyses and QCs will be disabled.
 pe_no_trim_fastq := false 	help (PE ONLY) No fastq trimming and use PE tagAlign for cross-correlation analysis.
-no_jsd 		:= true 	help Disable JSD plot generation
+no_jsd 		:= false 	help Disable JSD plot generation
 disable_gb_peak := true // disable gapped/broad peak generation
 
 help() // print help and exit if no parameters are given
@@ -408,8 +408,8 @@ void jsd() { // plot fingerprint
 
 		nth_jsd := min(4,nth)
 
-		string jsd_qc_all_reps
-		(jsd_png, jsd_qc_all_reps) = \
+		string jsd_qc_all_reps, jsd_dat
+		(jsd_png, jsd_qc_all_reps,jsd_dat) =                           \
 			jsd(filt_bams, ctl_filt_bam1, labels, "$out_dir/qc", nth_jsd )
 		wait
 		// get each line in jsd_qc_all_reps and save to individual qc file for each rep
@@ -436,7 +436,16 @@ void jsd() { // plot fingerprint
 		add_file_to_table( jsd_png, "QC and logs/Fingerprint JSD Plot")
 
 		print( "\n== Done jsd()\n" )
-	}
+        }/*else{
+            nth_jsd := min(4,nth)
+                group_id := (filt_bam.hasKey("ctl1"))?get_group_name( 1, 1 ):get_group_name(0,1) // 1st control or treat replicate
+                filt_bam_ := filt_bam{group_id}
+                string jsd_qc_all_reps,jsd_dat
+		(jsd_png, jsd_qc_all_reps,jsd_dat) =                           \
+			jsd_single_lib( filt_bam_, group_id, "$out_dir/qc", nth_jsd )
+                
+            print( "\n== Done jsd()\n" )
+            }*/
 }
 
 void align( int ctl, int rep, int nth_rep ) {

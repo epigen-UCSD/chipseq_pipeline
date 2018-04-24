@@ -67,7 +67,7 @@ input_dir="${WORKDIR}${ctl_name}_chip/align";
 ctl_prefix="$input_dir/ctl1/${samplenames[${ctl_id}*3]}" #index start from 0
 tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*3]}" #index start from 0
 #tag_suffix="_R1.PE2SE.nodup.tagAlign.gz"
-tag_suffix="_R1.PE2SE.nodup.nodup.bam"
+tag_suffix="_R1.PE2SE.nodup.bam"
 #tag_input="-tag ${tr_prefix}${tag_suffix} -ctl_tag ${ctl_prefix}${tag_suffix}"
 tag_input="-filt_bam ${tr_prefix}${tag_suffix} -ctl_filt_bam ${ctl_prefix}${tag_suffix}"
 
