@@ -677,8 +677,8 @@ void align_PE( int ctl, int rep, int nth_rep ) {
 		else {
 			nth_map = [nth_rep]
 		}
-		// align on R1 fastq
-		if ( ctl==0 && !pe_no_trim_fastq ) {
+		// align on R1 fastq 
+		if ( !pe_no_trim_fastq ) {
 			trimmed_fastq_R1 := trim_fastq( pooled_fastq_pair1, aln_o_dir, group )
 			add_file_to_report( trimmed_fastq_R1, "trim. fastq R1", group, "Raw reads/$long/Trimmed fastq R1" )
 			wait

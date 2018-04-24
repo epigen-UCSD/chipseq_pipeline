@@ -1,3 +1,4 @@
 *.chp
 .*.swp
 .nfs*
+/test/chipseq.bds.*
