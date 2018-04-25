@@ -9,7 +9,8 @@ PBS_NP=1
 samplenames=(`cat $samples`)
 
 prefix_basename=${samplenames[${PBS_ARRAYID}*3]} #index start from 0
-o_dir="${WORKDIR}${prefix_basename}_chip/qc/ctl1"
+o_dir="${WORKDIR}${prefix_basename}_chip"
+w_dir="${WORKDIR}${prefix_basename}_chip/qc/ctl1"
 species_chipqc=${samplenames[${PBS_ARRAYID}*3+1]}
 chrsz=/home/zhc268/data/GENOME/${species_chipqc}/${species_chipqc}.chrom.sizes
 ref_fa=/home/zhc268/data/GENOME/${species_chipqc}/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta
@@ -31,7 +32,7 @@ param_enh="--blacklist $enh"
 
 
 ../chipqc/run_chipqc.py   --workdir $o_dir \
-		    --outdir $o_dir \
+		    --outdir $w_dir \
 		    --outprefix $prefix_basename \
 		    --genome $species_chipqc \
 		    --chromsizes $chrsz \

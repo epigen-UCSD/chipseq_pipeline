@@ -263,6 +263,26 @@ def plot_gc(data_file):
 
     return b64encode(plot_img.getvalue())
 
+def run_preseq(bam_w_dups, prefix):
+    '''
+     Runs preseq. Look at preseq data output to get PBC/NRF.
+    '''
+    # First sort because this file no longer exists...
+    sort_bam = 'samtools sort -o {1}.sorted.bam -T {1} -@ 2 {0}'.format(
+        bam_w_dups, prefix)
+    os.system(sort_bam)
+
+    logging.info('Running preseq...')
+    preseq_data = '{0}.preseq.dat'.format(prefix)
+    preseq_log = '{0}.preseq.log'.format(prefix)
+    preseq = ('preseq lc_extrap '
+              '-P -B -o {0} {1}.sorted.bam -v 2> {2}').format(preseq_data,
+                                                              prefix,
+                                                              preseq_log)
+    logging.info(preseq)
+    os.system(preseq)
+    os.system('rm {0}.sorted.bam'.format(prefix))
+    return preseq_data, preseq_log
 
 
 def get_encode_complexity_measures(pbc_output):
@@ -286,31 +306,6 @@ def get_encode_complexity_measures(pbc_output):
 
     return results
 
-def get_picard_complexity_metrics(aligned_bam, prefix):
-        '''
-    Picard EsimateLibraryComplexity
-    '''
-    out_file = '{0}.picardcomplexity.qc'.format(prefix)
-    get_gc_metrics = ('java -Xmx4G -jar '
-                      '{2}/picard.jar '
-                      'EstimateLibraryComplexity INPUT={0} OUTPUT={1} '
-                      'VERBOSITY=ERROR '
-                      'QUIET=TRUE').format(aligned_bam,
-                                           out_file,
-                                           os.environ['PICARDROOT'])
-    os.system(get_gc_metrics)
-
-    # Extract the actual estimated library size
-    header_seen = False
-    est_library_size = 0
-    with open(out_file, 'rb') as fp:
-        for line in fp:
-            if header_seen:
-                est_library_size = int(float(line.strip().split()[-1]))
-                break
-            if 'ESTIMATED_LIBRARY_SIZE' in line:
-                header_seen = True
-    return est_library_size
 
 def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge=2000,
                   processes=8, greenleaf_norm=True):
@@ -870,21 +865,6 @@ locations with EXACTLY two read pairs. The PBC2 should be significantly
 greater than 1.
 </pre>
 
-  <h3>Picard EstimateLibraryComplexity</h3>
-  {{ '{0:,}'.format(sample['picard_est_library_size']) }}
-
-Attempts to estimate library complexity from sequence alone. Does so by sorting
-all reads by the first N bases (5 by default) of each read and then comparing reads
-with the first N bases identical to each other for duplicates. Reads are considered to 
-be duplicates if they match each other with no gaps and an overall mismatch rate less than
-or equal to MAX_DIFF_RATE (0.03 by default). The algorithm attempts to detect optical duplicates 
-separately from PCR duplicates and excludes these in the calculation of library size. 
-Also, since there is no alignment to screen out technical reads one further filter is 
-applied on the data. After examining all reads a Histogram is built of 
-[#reads in duplicate set -> #of duplicate sets]; all bins that contain exactly 
-one duplicate set are then removed from the Histogram as outliers before library 
-size is estimated.
-
   <h2>Fragment length statistics</h2>
   {{ inline_img(sample['fraglen_dist']) }}
   {{ qc_table(sample['nucleosomal']) }}
@@ -1059,8 +1039,6 @@ def main():
                                          OUTPUT_PREFIX)
 
     # Library complexity:  NRF, PBC1, PBC2
-    picard_est_library_size = get_picard_complexity_metrics(ALIGNED_BAM,
-                                                              OUTPUT_PREFIX)
     preseq_data, preseq_log = run_preseq(ALIGNED_BAM, OUTPUT_PREFIX) # SORTED BAM
     encode_lib_metrics = get_encode_complexity_measures(PBC_LOG)
 
@@ -1168,7 +1146,7 @@ def main():
 
         # Library complexity statistics
         ('encode_lib_complexity', encode_lib_metrics),
-        ('picard_est_library_size', picard_est_library_size),
+
 
         # Fragment length statistics
         ('fraglen_dist', fragment_length_plot(insert_data)),
