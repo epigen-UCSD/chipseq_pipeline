@@ -608,7 +608,7 @@ def get_fract_reads_in_regions(reads_bed, regions_bed):
 
 
 def get_signal_to_noise(final_bed, dnase_regions, blacklist_regions,
-                                                prom_regions, enh_regions):
+                                                prom_regions, enh_regions, peaks):
     '''
     Given region sets, determine whether reads are
     falling in or outside these regions
@@ -628,10 +628,101 @@ def get_signal_to_noise(final_bed, dnase_regions, blacklist_regions,
     # Enh regions
     reads_enh, fract_enh = get_fract_reads_in_regions(final_bed, enh_regions)
 
+    # Peak regions
+    reads_peaks, fract_peaks = get_fract_reads_in_regions(final_bed, peaks)
 
     return  reads_blacklist, fract_blacklist, \
-        reads_prom, fract_prom, reads_enh, fract_enh
+        reads_prom, fract_prom, reads_enh, fract_enh, reads_peaks, \
+        fract_peaks
 
+def get_region_size_metrics(peak_file):
+    '''
+    From the peak file, return a plot of the region size distribution and
+    the quartile metrics (summary from R)
+    '''
+
+    peak_size_summ = OrderedDict([
+        ('Min size', 0),
+        ('25 percentile', 0),
+        ('50 percentile (median)', 0),
+        ('75 percentile', 0),
+        ('Max size', 0),
+        ('Mean', 0),
+    ])
+
+    # If peak file is none, return nothing
+    if peak_file == None:
+        return peak_size_summ, ''
+
+    # Load peak file. If it fails, return nothing as above
+    try:
+        peak_df = pd.read_table(peak_file, compression='gzip', header=None)
+    except:
+        return peak_size_summ, ''
+
+    # Subtract third column from second to get summary
+    region_sizes = peak_df.ix[:,2] - peak_df.ix[:,1]
+
+    # Summarize and store in ordered dict
+    peak_summary_stats = region_sizes.describe()
+
+    peak_size_summ = OrderedDict([
+        ('Min size', peak_summary_stats['min']),
+        ('25 percentile', peak_summary_stats['25%']),
+        ('50 percentile (median)', peak_summary_stats['50%']),
+        ('75 percentile', peak_summary_stats['75%']),
+        ('Max size', peak_summary_stats['max']),
+        ('Mean', peak_summary_stats['mean']),
+    ])
+
+    # Plot density diagram using matplotlib
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    y, binEdges = np.histogram(region_sizes, bins=100)
+    bincenters = 0.5 * (binEdges[1:] + binEdges[:-1])
+
+    # density = gaussian_kde(y) # from scipy.stats import gaussian_kde
+    # density.covariance_factor = lambda : .25
+    # density._compute_covariance()
+
+    plt.plot(bincenters, y, '-')
+    filename = peak_file.split('/')[-1]
+    ax.set_title('Peak width distribution for {0}'.format(filename))
+    #ax.set_yscale('log')
+
+    plot_img = BytesIO()
+    fig.savefig(plot_img, format='png')
+
+    return peak_size_summ, b64encode(plot_img.getvalue())
+
+
+def get_peak_counts(raw_peaks, naive_overlap_peaks=None, idr_peaks=None):
+    '''
+    Return a table with counts for raw peaks, IDR peaks, and naive
+    overlap peaks
+    '''
+
+    # Count peaks
+    raw_count = sum(1 for line in getFileHandle(raw_peaks))
+    if naive_overlap_peaks != None:
+        naive_count = sum(1 for line in getFileHandle(naive_overlap_peaks))
+    else:
+        naive_count = 0
+
+    if idr_peaks != None:
+        idr_count = sum(1 for line in getFileHandle(idr_peaks))
+    else:
+        idr_count = 0
+
+    # Literally just throw these into a QC table
+    results = []
+    results.append(QCGreaterThanEqualCheck('Raw peaks', 10000)(raw_count))
+    results.append(QCGreaterThanEqualCheck('Naive overlap peaks',
+                                           10000)(naive_count))
+    results.append(QCGreaterThanEqualCheck('IDR peaks', 10000)(idr_count))
+
+    return results
 
 
 
@@ -885,6 +976,27 @@ fragment lengths will arise. Good libraries will show these peaks in a
 fragment length distribution and will show specific peak ratios.
 </pre>
 
+    <h2>Peak statistics</h2>
+  {{ qc_table(sample['peak_counts']) }}
+
+  <h3>Raw peak file statistics</h3>
+  <table class='qc_table'>
+    <tbody>
+      {% for field, value in sample['raw_peak_summ'].iteritems() %}
+      <tr>
+        <td>{{ field }}</td>
+        <td>{{ value }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {{ inline_img(sample['raw_peak_dist']) }}
+
+<pre>
+For a good ATAC-seq experiment in human, you expect to get 100k-200k peaks
+for a specific cell type.
+</pre>
 
 
   <h2>Sequence quality metrics</h2>
@@ -987,6 +1099,8 @@ def parse_args():
                         help='Final filtered alignments in BED format')
     parser.add_argument('--bigwig',
                         help='Final bigwig')
+    parser.add_argument('--peaks',
+                        help='Peak file')
     parser.add_argument('--use_sambamba_markdup', action='store_true',
                         help='Use sambamba markdup instead of Picard')
 
@@ -1008,11 +1122,38 @@ def parse_args():
     PROM = args.prom
     ENH = args.enh
 
+    # If mode 1 - TO BE DEPRECATED. In this case, the module is run with
+    # Jin's pipeline
+    if args.pipeline == 'epigen':
+        FASTQ = args.fastq1
+        ALIGNED_BAM = '{0}.bam'.format(INPUT_PREFIX)
+        ALIGNMENT_LOG = '{0}.align.log'.format(INPUT_PREFIX)
+        COORDSORT_BAM = '{0}.nodup.bam'.format(INPUT_PREFIX)
+        DUP_LOG = '{0}.dup.qc'.format(INPUT_PREFIX)
+        PBC_LOG = '{0}.nodup.pbc.qc'.format(INPUT_PREFIX)
+        FINAL_BAM = '{0}.nodup.nonchrM.bam'.format(INPUT_PREFIX)
+        FINAL_BED = '{0}.nodup.nonchrM.tn5.bed.gz'.format(INPUT_PREFIX)
+        BIGWIG = '{0}.nodup.nonchrM.tn5.pf.pval.signal.bigwig'.format(
+            INPUT_PREFIX)
+        PEAKS = '{0}.nodup.nonchrM.tn5.pf_peaks.narrowPeak'.format(
+            INPUT_PREFIX)
+    else:  # mode 2
+        FASTQ = args.fastq1
+        ALIGNED_BAM = args.alignedbam
+        ALIGNMENT_LOG = args.alignmentlog
+        COORDSORT_BAM = args.coordsortbam
+        DUP_LOG = args.duplog
+        PBC_LOG = args.pbc
+        FINAL_BAM = args.finalbam
+        FINAL_BED = args.finalbed
+        BIGWIG = args.bigwig
+        PEAKS = args.peaks
+        USE_SAMBAMBA_MARKDUP = args.use_sambamba_markdup
 
     return NAME, OUTPUT_PREFIX, REF, TSS, DNASE, BLACKLIST, PROM, ENH, \
         GENOME, CHROMSIZES, FASTQ, ALIGNED_BAM, \
         ALIGNMENT_LOG, COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM, \
-        FINAL_BED, BIGWIG, USE_SAMBAMBA_MARKDUP
+        FINAL_BED, BIGWIG, PEAKS, USE_SAMBAMBA_MARKDUP
 
 
 def main():
@@ -1022,7 +1163,7 @@ def main():
     [NAME, OUTPUT_PREFIX, REF, TSS, DNASE, BLACKLIST, PROM, ENH,
       GENOME, CHROMSIZES, FASTQ, ALIGNED_BAM,
      ALIGNMENT_LOG, COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM,
-     FINAL_BED, BIGWIG, USE_SAMBAMBA_MARKDUP] = parse_args()
+     FINAL_BED, BIGWIG, PEAKS, USE_SAMBAMBA_MARKDUP] = parse_args()
 
     # Set up the log file and timing
     logging.basicConfig(filename='{0}.log'.format(OUTPUT_PREFIX), level=logging.DEBUG,
@@ -1084,9 +1225,13 @@ def main():
     # Signal to noise: reads in DHS regions vs not, reads falling
     # into blacklist regions
     reads_blacklist, fract_blacklist, \
-    reads_prom, fract_prom, reads_enh, fract_enh = get_signal_to_noise(FINAL_BED,
-                          DNASE,BLACKLIST,PROM,ENH)
+    reads_prom, fract_prom, reads_enh, fract_enh, \
+    reads_peaks, fract_peaks = get_signal_to_noise(FINAL_BED,
+                          DNASE,BLACKLIST,PROM,ENH,PEAKS)
 
+    # Peak metrics
+    peak_counts = get_peak_counts(PEAKS) # raw peaks only 
+    raw_peak_summ, raw_peak_dist = get_region_size_metrics(PEAKS)
 
     # Finally output the bar chart of reads
     read_count_data = [first_read_count, first_read_count*fract_mapq,
@@ -1132,7 +1277,10 @@ def main():
         ('Fraction of reads in blacklist regions', (reads_blacklist,
                                                     fract_blacklist)),
         ('Fraction of reads in promoter regions', (reads_prom, fract_prom)),
-        ('Fraction of reads in enhancer regions', (reads_enh, fract_enh))
+        ('Fraction of reads in enhancer regions', (reads_enh, fract_enh)),
+        ('Fraction of reads in called peak regions', (reads_peaks,
+                                                      fract_peaks)),
+
     ])
 
     SAMPLE = OrderedDict([
@@ -1157,6 +1305,10 @@ def main():
         # Fragment length statistics
         ('fraglen_dist', fragment_length_plot(insert_data)),
 
+        # Peak metrics
+        ('peak_counts', peak_counts),
+        ('raw_peak_summ', raw_peak_summ),
+        ('raw_peak_dist', raw_peak_dist),
 
         # GC
         ('gc_bias', plot_gc(gc_out)),

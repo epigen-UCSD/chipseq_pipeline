@@ -99,7 +99,8 @@ void main() { // chipseq pipeline starts here
 
 	align() // align and postalign
 	jsd() // plot fingerprint and compute synthetic JS distance
-
+            chipqc() 
+        
 	if ( !pe_xcor_only ) {
 		pool_tags() // make pooled tagaligns and choose appropriate control for each replicate
 		call_peaks() // call peaks in parallel (MACS2,SPP)
@@ -860,6 +861,31 @@ void align_PE( int ctl, int rep, int nth_rep ) {
 		if ( is_final_stage_xcor() ) return
 	}
 }
+
+
+void chipqc(int ctl, int rep, int nth_rep) {
+
+    if (is_se(ctl, rep)) {
+        chipqc_SE(ctl, rep, nth_rep) 
+            }else{
+        chipqc_PE(ctl, rep, nth_rep) 
+			}
+
+}
+
+
+void chipqc_PE(int ctl, int rep, int nth_rep){
+
+
+
+}
+
+void chipqc(){
+
+    if ( !(is_final_stage_xcor() || is_final_stage_idr()) ) return    
+    print( "\n== Start chipqc()\n" )    
+        print( "\n== Done chipqc()\n" )
+        }
 
 void pool_tags() {
 
