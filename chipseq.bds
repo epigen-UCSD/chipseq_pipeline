@@ -32,7 +32,9 @@ pe_xcor_only 	:= false 	help (PE ONLY) Align R1 of paired end fastqs only and fo
 pe_no_trim_fastq := false 	help (PE ONLY) No fastq trimming and use PE tagAlign for cross-correlation analysis.
 no_jsd 		:= false 	help Disable JSD plot generation
 disable_gb_peak := true // disable gapped/broad peak generation
+no_chipqc 	:= false        help Disable advanced chipseq qc
 
+                                                                                                                                                              
 help() // print help and exit if no parameters are given
 
 include "modules/pipeline_template.bds"
@@ -52,6 +54,8 @@ include "modules/callpeak_macs2_chipseq.bds"
 include "modules/callpeak_naive_overlap.bds"
 include "modules/callpeak_idr.bds"
 include "modules/callpeak_blacklist_filter.bds"
+
+include "modules/chipqc.bds"                                                                                                                                                                                                                                                                                                                            
 
 //include "modules/signal.bds"
 
@@ -87,7 +91,8 @@ string{} sig_trk 	 	// signal tracks from deepTools or bamCoverage: map with key
 string{} pval_bigwig, fc_bigwig // signal track from macs2
 string num_peak_log
 
-
+string{} chipqc_qc
+    
 main()
 
 
@@ -138,6 +143,7 @@ void read_conf_chipseq() {
 	idr_thresh 	= get_conf_val_real( idr_thresh, 	["idr_thresh"] )
 	use_pooled_ctl 	= get_conf_val_bool( use_pooled_ctl, 	["use_pooled_ctl"] )
 	true_rep 	= get_conf_val_bool( true_rep, 		["true_rep"] )
+	no_chipqc 	= get_conf_val_bool( no_chipqc, 		["no_chipqc"] )                                                                                                                                                          
 	no_pseudo_rep	= get_conf_val_bool( no_pseudo_rep, 	["no_pseudo_rep"] )
 	no_xcor		= get_conf_val_bool( no_xcor, 		["no_xcor"] )
 	no_gpeak_filt	= get_conf_val_bool( no_gpeak_filt, 	["no_gpeak_filt"] )
@@ -191,6 +197,7 @@ void read_conf_chipseq() {
 	print( "Force to use pooled ctl\t\t\t: $use_pooled_ctl\n")
 	print( "Peak calling for true reps only\t\t: $true_rep\n" )
 	print( "No peak calling for self pseudo reps\t: $no_pseudo_rep\n" )
+	print( "No CHIPQC (advanced QC report)\t\t: $no_chipqc\n")                        
 	print( "Disable cross-correlation analysis\t: $no_xcor\n" )
 	print( "Disable g. peak filt. thru. n. peak\t: $no_gpeak_filt\n" )
 	print( "Disable genome browser tracks\t: $no_browser_tracks\n" )	
@@ -269,6 +276,7 @@ void init_filetable() { // init file table labels in HTML report
 	add_label_to_table("Filtered peak")
 	add_label_to_table("Filtered gapped peak")
 	add_label_to_table("Filtered broad peak")
+	add_label_to_table("CHIPQC")                                        
 	add_label_to_table("IDR plot")
 	add_label_to_table("Unthresholded IDR peak")
 
@@ -299,7 +307,16 @@ void chk_param() {
 	if ( pe_xcor_only && !is_input_fastq(0,1) ) {
 		error("-pe_xcor_only is for fastqs only!\n")
 	}
-	if ( has_input_fastq() ) 	chk_align_bwa()	
+	if ( !no_chipqc ) {
+		no_chipqc = !chk_chipqc()
+	}
+        
+	if ( has_input_fastq() ) 	chk_align_bwa()
+	if ( !has_input_fastq() && !no_chipqc ) {
+		print("Warning: CHIPQC is available for fastq inputs only. Disabling CHIPQC...\n")
+		no_chipqc = true
+	}
+                                            
 	if ( is_final_stage_idr() ) 	chk_idr()
 	if ( is_final_stage_idr() || is_final_stage_peak() ) chk_callpeak_macs2()
 
@@ -863,29 +880,67 @@ void align_PE( int ctl, int rep, int nth_rep ) {
 }
 
 
-void chipqc(int ctl, int rep, int nth_rep) {
-
-    if (is_se(ctl, rep)) {
-        chipqc_SE(ctl, rep, nth_rep) 
-            }else{
-        chipqc_PE(ctl, rep, nth_rep) 
-			}
-
-}
-
-
-void chipqc_PE(int ctl, int rep, int nth_rep){
-
-
-
-}
 
 void chipqc(){
 
-    if ( !(is_final_stage_xcor() || is_final_stage_idr()) ) return    
-    print( "\n== Start chipqc()\n" )    
-        print( "\n== Done chipqc()\n" )
-        }
+    if ( no_chipqc ) return
+    if ( !(is_final_stage_xcor() )) return     // only allow for xcor
+                                        
+    print( "\n== Start chipqc()\n" )
+                                        
+    for ( int ctl=0; ctl <= 1; ctl++) { // iterate through inputs (ctl==0 : exp. replicate, ctl==1 : control)
+        if ( ctl==1 && !ctl_exists() ) continue
+                                           
+        for ( int rep=1; rep <= get_num_rep( ctl ); rep++) {
+            if ( !input_file_exists( ctl, rep ) ) continue
+
+                                                      
+            if ( no_par ) chipqc( ctl,rep )
+                else 	  par chipqc(ctl, rep )
+    
+        }                              
+    }
+
+    wait 
+                                        
+     print( "\n== Done chipqc()\n" )
+}
+
+void chipqc(int ctl, int rep ) {
+
+    //	if ( true_rep ) {
+    //		print("Warning: CHIPQC cannot run with a flag -true_rep\n");
+    //		return
+    //	}
+	if ( no_dup_removal ) {
+		print("Warning: CHIPQC cannot run with the flag -no_dup_removal\n");
+		return
+	}
+
+    group := get_group_name( ctl, rep )
+            long  := get_long_group_name( ctl, rep )
+            fastqs := get_fastq(ctl,rep)
+
+            qc_o_dir 	:= mkdir( "$out_dir/qc/$group" )
+            aln_o_dir 	:= mkdir( "$out_dir/align/$group" ) // create align output directory
+
+
+            string chipqc_html
+            
+            if ( is_se(ctl, rep ) ) {
+                
+                ( chipqc_html, chipqc_qc{group} ) = chipqc( fastqs[0], "", bam{group}, pbc_qc{group}, \
+                                                               dup_qc{group}, filt_bam{group}, final_tag{group}, qc_o_dir, group )
+            }
+            else {
+                ( chipqc_html, chipqc_qc{group} ) = chipqc( fastqs[0], fastqs[1], bam{group}, pbc_qc{group}, \
+                                                          dup_qc{group}, filt_bam{group}, final_tag{group}, qc_o_dir, group ) 
+                    }
+                    
+        add_file_to_report( chipqc_html, "CHIPQC\\nreport", group, "QC and logs/CHIPQC/$long/CHIPQC HTML report" )
+            }
+
+
 
 void pool_tags() {
 
