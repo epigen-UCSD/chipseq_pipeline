@@ -930,11 +930,14 @@ void chipqc(int ctl, int rep ) {
             if ( is_se(ctl, rep ) ) {
                 
                 ( chipqc_html, chipqc_qc{group} ) = chipqc( fastqs[0], "", bam{group}, pbc_qc{group}, \
-                                                               dup_qc{group}, filt_bam{group}, final_tag{group}, qc_o_dir, group )
+                                                               dup_qc{group}, filt_bam{group}, tag{group}, qc_o_dir, group )
             }
             else {
-                ( chipqc_html, chipqc_qc{group} ) = chipqc( fastqs[0], fastqs[1], bam{group}, pbc_qc{group}, \
-                                                          dup_qc{group}, filt_bam{group}, final_tag{group}, qc_o_dir, group ) 
+                fastqs_pair1 := get_fastq( ctl, rep, 1 )
+                fastqs_pair2 := get_fastq( ctl, rep, 2 )
+                    
+                ( chipqc_html, chipqc_qc{group} ) = chipqc( fastqs_pair1[0], fastqs_pair2[0], bam{group}, pbc_qc{group}, \
+                                                          dup_qc{group}, filt_bam{group}, tag{group}, qc_o_dir, group ) 
                     }
                     
         add_file_to_report( chipqc_html, "CHIPQC\\nreport", group, "QC and logs/CHIPQC/$long/CHIPQC HTML report" )

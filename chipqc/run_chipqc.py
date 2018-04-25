@@ -812,11 +812,6 @@ if your file is paired end, then you should divide these counts by two.
 
 
   <h2>Alignment statistics</h2>
-  <h3>Bowtie alignment log</h3>
-  <pre>
-{{ sample['bowtie_stats'] }}
-  </pre>
-
   <h3>Samtools flagstat</h3>
   <pre>
 {{ sample['samtools_flagstat'] }}

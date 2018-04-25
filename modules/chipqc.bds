@@ -12,7 +12,7 @@ tss_enrich 	:= "" 		help TSS enrichment bed for chipqc.
 prom 		:= ""		help Promoter bed (promoter region file) for chipqc.
 enh 		:= ""		help Enhancer bed (enhancer region file) for chipqc.
 
-mem_chipqc 	:= "20G"	help Max. memory for CHIPQC (default: 20G).
+mem_chipqc 	:= "20G"	        help Max. memory for CHIPQC (default: 20G).
 wt_chipqc	:= "47h"	help Walltime for CHIPQC (default: 47h, 47:00:00).
 
 grp_color_chipqc := "pink"
