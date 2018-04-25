@@ -183,21 +183,6 @@ def get_read_length(fastq_file):
     return int(max_length)
 
 
-def get_bowtie_stats(bowtie_alignment_log):
-    '''
-    From the Bowtie alignment log, get relevant stats and return
-    the file in a list format where each line is an element in
-    the list. Can be parsed further if desired.
-    '''
-    logging.info('Reading bowtie alignment log...')
-    bowtie_text = ''
-    with open(bowtie_alignment_log, 'rb') as fp:
-        for line in fp:
-            logging.info(line.strip())
-            bowtie_text += line
-    return bowtie_text
-
-
 def get_chr_m(sorted_bam_file):
     '''
     Get fraction of reads that are mitochondrial (chr M).
@@ -205,6 +190,7 @@ def get_chr_m(sorted_bam_file):
     logging.info('Getting mitochondrial chromosome fraction...')
     chrom_list = pysam.idxstats(sorted_bam_file, split_lines=True)
     tot_reads = 0
+    chr_m_reads=0
     for chrom in chrom_list:
         chrom_stats = chrom.split('\t')
         if chrom_stats[0] == 'chrM':
@@ -300,6 +286,31 @@ def get_encode_complexity_measures(pbc_output):
 
     return results
 
+def get_picard_complexity_metrics(aligned_bam, prefix):
+        '''
+    Picard EsimateLibraryComplexity
+    '''
+    out_file = '{0}.picardcomplexity.qc'.format(prefix)
+    get_gc_metrics = ('java -Xmx4G -jar '
+                      '{2}/picard.jar '
+                      'EstimateLibraryComplexity INPUT={0} OUTPUT={1} '
+                      'VERBOSITY=ERROR '
+                      'QUIET=TRUE').format(aligned_bam,
+                                           out_file,
+                                           os.environ['PICARDROOT'])
+    os.system(get_gc_metrics)
+
+    # Extract the actual estimated library size
+    header_seen = False
+    est_library_size = 0
+    with open(out_file, 'rb') as fp:
+        for line in fp:
+            if header_seen:
+                est_library_size = int(float(line.strip().split()[-1]))
+                break
+            if 'ESTIMATED_LIBRARY_SIZE' in line:
+                header_seen = True
+    return est_library_size
 
 def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge=2000,
                   processes=8, greenleaf_norm=True):
@@ -607,7 +618,7 @@ def get_fract_reads_in_regions(reads_bed, regions_bed):
     return read_count, fract_reads
 
 
-def get_signal_to_noise(final_bed, dnase_regions, blacklist_regions,
+def get_signal_to_noise(final_bed, blacklist_regions,
                                                 prom_regions, enh_regions):
     '''
     Given region sets, determine whether reads are
@@ -944,7 +955,7 @@ def parse_args():
     Set up the package to be run from the command line
     '''
 
-    parser = argparse.ArgumentParser(description='ATAC-seq QC package')
+    parser = argparse.ArgumentParser(description='CHIP-seq QC package')
 
     # Directories and prefixes
     parser.add_argument('--workdir', help='Working directory')
@@ -956,7 +967,6 @@ def parse_args():
     parser.add_argument('--chromsizes', help='chromsizes file')
     parser.add_argument('--ref', help='Reference fasta file')
     parser.add_argument('--tss', help='TSS file')
-    parser.add_argument('--dnase', help='Open chromatin region file')
     parser.add_argument('--blacklist', help='Blacklisted region file')
     parser.add_argument('--prom', help='Promoter region file')
     parser.add_argument('--enh', help='Enhancer region file')
@@ -978,15 +988,12 @@ def parse_args():
     parser.add_argument('--fastq2',
                         help='Second set of reads if paired end')
     parser.add_argument('--alignedbam', help='BAM file from the aligner')
-    parser.add_argument('--alignmentlog', help='Alignment log')
     parser.add_argument('--coordsortbam', help='BAM file sorted by coordinate')
     parser.add_argument('--duplog', help='Picard duplicate metrics file')
     parser.add_argument('--pbc', help='ENCODE library complexity metrics file')
     parser.add_argument('--finalbam', help='Final filtered BAM file')
     parser.add_argument('--finalbed',
                         help='Final filtered alignments in BED format')
-    parser.add_argument('--bigwig',
-                        help='Final bigwig')
     parser.add_argument('--use_sambamba_markdup', action='store_true',
                         help='Use sambamba markdup instead of Picard')
 
@@ -1003,26 +1010,34 @@ def parse_args():
     CHROMSIZES = args.chromsizes
     REF = args.ref
     TSS = args.tss
-    DNASE = args.dnase
     BLACKLIST = args.blacklist
     PROM = args.prom
     ENH = args.enh
 
-
-    return NAME, OUTPUT_PREFIX, REF, TSS, DNASE, BLACKLIST, PROM, ENH, \
+    ## other args
+    FASTQ = args.fastq1
+    ALIGNED_BAM = args.alignedbam
+    COORDSORT_BAM = args.coordsortbam
+    DUP_LOG = args.duplog
+    PBC_LOG = args.pbc
+    FINAL_BAM = args.finalbam
+    FINAL_BED = args.finalbed
+    USE_SAMBAMBA_MARKDUP = args.use_sambamba_markdup
+        
+    return NAME, OUTPUT_PREFIX, REF, TSS, BLACKLIST, PROM, ENH, \
         GENOME, CHROMSIZES, FASTQ, ALIGNED_BAM, \
-        ALIGNMENT_LOG, COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM, \
-        FINAL_BED, BIGWIG, USE_SAMBAMBA_MARKDUP
+        COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM, \
+        FINAL_BED, USE_SAMBAMBA_MARKDUP
 
 
 def main():
 
 
     # Parse args
-    [NAME, OUTPUT_PREFIX, REF, TSS, DNASE, BLACKLIST, PROM, ENH,
+    [NAME, OUTPUT_PREFIX, REF, TSS, BLACKLIST, PROM, ENH,
       GENOME, CHROMSIZES, FASTQ, ALIGNED_BAM,
-     ALIGNMENT_LOG, COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM,
-     FINAL_BED, BIGWIG, USE_SAMBAMBA_MARKDUP] = parse_args()
+     COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM,
+     FINAL_BED, USE_SAMBAMBA_MARKDUP] = parse_args()
 
     # Set up the log file and timing
     logging.basicConfig(filename='{0}.log'.format(OUTPUT_PREFIX), level=logging.DEBUG,
@@ -1038,13 +1053,15 @@ def main():
     read_len = get_read_length(FASTQ)
 
     # Sequencing metrics: Bowtie1/2 alignment log, chrM, GC bias
-    BOWTIE_STATS = get_bowtie_stats(ALIGNMENT_LOG)
     chr_m_reads, fraction_chr_m = get_chr_m(COORDSORT_BAM)
     gc_out, gc_plot, gc_summary = get_gc(FINAL_BAM,
                                          REF,
                                          OUTPUT_PREFIX)
 
     # Library complexity:  NRF, PBC1, PBC2
+    picard_est_library_size = get_picard_complexity_metrics(ALIGNED_BAM,
+                                                              OUTPUT_PREFIX)
+    preseq_data, preseq_log = run_preseq(ALIGNED_BAM, OUTPUT_PREFIX) # SORTED BAM
     encode_lib_metrics = get_encode_complexity_measures(PBC_LOG)
 
     # Filtering metrics: duplicates, map quality
@@ -1085,7 +1102,7 @@ def main():
     # into blacklist regions
     reads_blacklist, fract_blacklist, \
     reads_prom, fract_prom, reads_enh, fract_enh = get_signal_to_noise(FINAL_BED,
-                          DNASE,BLACKLIST,PROM,ENH)
+                          BLACKLIST,PROM,ENH)
 
 
     # Finally output the bar chart of reads
@@ -1144,7 +1161,6 @@ def main():
         ('read_tracker', read_tracker_plot),
 
         # Alignment statistics
-        ('bowtie_stats', BOWTIE_STATS),
         ('samtools_flagstat', flagstat),
 
         # Filtering statistics
