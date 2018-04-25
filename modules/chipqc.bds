@@ -56,7 +56,7 @@ bool chk_chipqc() {
 	return true
 }
 
-string[] chipqc( string fastq1, string fastq2, string bam, string align_log, string pbc_log, \
+string[] chipqc( string fastq1, string fastq2, string bam, string pbc_log, \
 		 string dup_log, string filt_bam, string bed, \
 		 string o_dir, string group ) {
 
@@ -75,8 +75,8 @@ string[] chipqc( string fastq1, string fastq2, string bam, string align_log, str
 	species_chipqc 	:= species.indexOf("_")>=0 ? (species.split("_"))[0] : species
 	print("species_chipqc: $species_chipqc\n")
 
-	in  	:= (fastq2!="") ? [ fastq1, fastq2, bam, align_log, pbc_log, dup_log, filt_bam, bed ] \
-				: [ fastq1, bam, align_log, pbc_log, dup_log, filt_bam, bed ]
+	in  	:= (fastq2!="") ? [ fastq1, fastq2, bam, pbc_log, dup_log, filt_bam, bed ] \
+				: [ fastq1, bam, pbc_log, dup_log, filt_bam, bed ]
 	out 	:= [ html, txt ] //, gc_plot, hist_graph, lg_vplot, vplot, signal ]
 
 	taskName:= "chipqc "+group
@@ -111,7 +111,6 @@ string[] chipqc( string fastq1, string fastq2, string bam, string align_log, str
 		    --pbc $pbc_log\
 		    $param_fastq \
 		    --alignedbam $bam \
-		    --alignmentlog $align_log \
 		    --coordsortbam $bam \
 		    --duplog $dup_log \
 		    --finalbam $filt_bam \
