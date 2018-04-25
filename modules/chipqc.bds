@@ -57,8 +57,8 @@ bool chk_chipqc() {
 }
 
 string[] chipqc( string fastq1, string fastq2, string bam, string align_log, string pbc_log, \
-		 string dup_log, string filt_bam, string bed, string bigwig, string peak, \
-		 string peak_naive_overlap, string idr_peak, string o_dir, string group ) {
+		 string dup_log, string filt_bam, string bed, \
+		 string o_dir, string group ) {
 
 	prefix 		:= replace_dir( rm_ext( fastq1, ["fastq","fq"] ), o_dir ) + ( (fastq2!="") ? ".PE2SE" : "" )
 
@@ -75,8 +75,8 @@ string[] chipqc( string fastq1, string fastq2, string bam, string align_log, str
 	species_chipqc 	:= species.indexOf("_")>=0 ? (species.split("_"))[0] : species
 	print("species_chipqc: $species_chipqc\n")
 
-	in  	:= (fastq2!="") ? [ fastq1, fastq2, bam, align_log, pbc_log, dup_log, filt_bam, bed, bigwig, peak ] \
-				: [ fastq1, bam, align_log, pbc_log, dup_log, filt_bam, bed, bigwig, peak ]
+	in  	:= (fastq2!="") ? [ fastq1, fastq2, bam, align_log, pbc_log, dup_log, filt_bam, bed ] \
+				: [ fastq1, bam, align_log, pbc_log, dup_log, filt_bam, bed ]
 	out 	:= [ html, txt ] //, gc_plot, hist_graph, lg_vplot, vplot, signal ]
 
 	taskName:= "chipqc "+group
@@ -116,8 +116,6 @@ string[] chipqc( string fastq1, string fastq2, string bam, string align_log, str
 		    --duplog $dup_log \
 		    --finalbam $filt_bam \
 		    --finalbed $bed \
-		    --bigwig $bigwig \
-		    --peaks $peak \
 		    $param_blacklist $param_prom $param_enh
 
 		//sys rm -f test.log test.png
