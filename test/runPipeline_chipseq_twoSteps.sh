@@ -82,7 +82,7 @@ wait
 #results_transfer.sh $INPREFIX
 
 
-#eg: bash  ./runPipeline_chipseq_twoSteps.sh $(pwd)/samples.txt 0 $(pwd) "/home/zhc268/scratch/outputs/"  
+#eg: bash  ./runPipeline_chipseq_twoSteps.sh $(pwd)/samples.txt 2 $(pwd) "/home/zhc268/scratch/outputs/"  
 
 
 

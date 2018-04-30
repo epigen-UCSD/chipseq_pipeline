@@ -1817,10 +1817,18 @@ string html_chipseq_QC() {
 		if ( pbc_qc.hasKey( group ) ) 		pbc_qcs			+= pbc_qc{group}
 		if ( jsd_qc.hasKey( group ) ) 		jsd_qcs			+= jsd_qc{group}
 	}
-	for ( int rep=1; rep<=get_num_rep(); rep++ ) {
+	for ( int rep=1; rep<=get_num_rep(1); rep++ ) {
+
 		if ( input_file_exists( 1, rep ) ) { // if control exists
+
 			group := "ctl$rep"
-			groups.add( group )
+  			groups.add( group )
+				
+    		if ( xcor_qc.hasKey( group ) )	{
+	    		xcor_qcs 		+= xcor_qc{group}
+		    	xcor_plots 		+= xcor_plot{group}
+	    	}
+				
 			if ( flagstat_qc.hasKey( group ) )	flagstat_qcs 		+= flagstat_qc{group}
 			if ( dup_qc.hasKey( group ) ) 		dup_qcs 		+= dup_qc{group}
 			if ( flagstat_nodup_qc.hasKey( group ) )	flagstat_nodup_qcs 	+= flagstat_nodup_qc{group}
