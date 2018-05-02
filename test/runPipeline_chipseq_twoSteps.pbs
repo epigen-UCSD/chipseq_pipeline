@@ -31,7 +31,7 @@ fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
 type="histone"
 true_rep="true"
 no_pseudo_rep="true"
-outdir="${WORKDIR}${INPREFIX}_chip"; mkdir -p $outdir
+outdir="${WORKDIR}${INPREFIX}"; mkdir -p $outdir
 
 ############################################################
 # Step 1
