@@ -182,7 +182,7 @@ string[] bwa_sam_PE( string fastq1, string fastq2, string sai1, string sai2, str
 
 		sys $shcmd_init
 		
-		sys bwa sampe $bwa_idx $sai1 $sai2 $fastq1 $fastq2 | pigz -p $nth_bwa -nc > $sam
+		sys bwa sampe -P $bwa_idx $sai1 $sai2 $fastq1 $fastq2 | pigz -p $nth_bwa -nc > $sam
 
 		//# Remove read pairs with bad CIGAR strings and sort by position
 

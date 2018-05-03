@@ -89,10 +89,12 @@ wait
 # runFastQC & fastq_screen
 ############################################################
 
-#runFastQC_screen.sh $INPREFIX
-#results_transfer.sh $INPREFIX
+runFastQC_screen.sh $INPREFIX
+results_transfer.sh $INPREFIX chip 
 
 
 #eg: qsub  -t 0-2 -v samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 
 
 #eg:qsub -t 0-3 -v samples="/home/zhc268/data/logs/zhc268/run_2018-03-01_AVD_chip.txt",FASTQDIR="/home/zhc268/data/seqdata/",WORKDIR="/home/zhc268/scratch/outputs/" ./runPipeline_chipseq_twoSteps.pbs
+
+#eg: qsub -t 0-13 -v samples="/home/zhc268/data/logs/zhc268/run_2018-05-02_avdchip.txt",FASTQDIR="/home/zhc268/data/seqdata/",WORKDIR="/home/zhc268/scratch/outputs/" ./test/runPipeline_chipseq_twoSteps.pbs
