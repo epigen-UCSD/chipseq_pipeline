@@ -44,7 +44,7 @@ final_stage="xcor"
 
 # run pipeline
 bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
-    -type $type \
+    -type $type -no_par \
     -final_stage $final_stage \
     -true_rep $true_rep \
     -no_pseudo_rep $no_pseudo_rep \
@@ -74,7 +74,7 @@ tag_input="-filt_bam ${tr_prefix}${tag_suffix} -ctl_filt_bam ${ctl_prefix}${tag_
 
 # run pipeline
 bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
-    -type $type \
+    -type $type -no_par \
     -true_rep $true_rep \
     -no_pseudo_rep $no_pseudo_rep \
     -nth $PBS_NP \
