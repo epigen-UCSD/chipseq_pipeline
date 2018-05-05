@@ -62,6 +62,9 @@ string[] macs2_chipseq_npeak_and_signal( string tag, string ctl_tag, string frag
 	prefix_sig 	:= replace_dir( prefix, sig_o_dir )
 
 	npeakfile 	:= "$prefix.pval$pval_thresh_macs2.$cap_num_peak_macs2.narrowPeak.gz"
+	pileup_bedgraph 	:= "$prefix.pileup.signal.bedgraph"
+	pileup_bedgraph_srt	:= "$prefix.pileup.signal.srt.bedgraph"
+	pileup_bigwig 	:= "$prefix_sig.pileup.signal.bw"
 	fc_bedgraph 	:= "$prefix.fc.signal.bedgraph"
 	fc_bedgraph_srt	:= "$prefix.fc.signal.srt.bedgraph"
 	fc_bigwig 	:= "$prefix_sig.fc.signal.bw"
@@ -77,7 +80,7 @@ string[] macs2_chipseq_npeak_and_signal( string tag, string ctl_tag, string frag
 	int_cap_num_peak_macs2 := parse_number( cap_num_peak_macs2 )
 
 	in 	:= (ctl_tag != "") ? [ tag, ctl_tag ] : [ tag ]
-	out 	:= make_sig ? [ npeakfile, fc_bigwig, pval_bigwig ] : [ npeakfile ]
+	out 	:= make_sig ? [ npeakfile, pileup_bigwig, fc_bigwig, pval_bigwig ] : [ npeakfile ]
 
 	taskName:= "macs2 n/s " + group
 	mem := get_res_mem(mem_macs2,1);	timeout := get_res_wt(wt_macs2)
@@ -109,6 +112,16 @@ string[] macs2_chipseq_npeak_and_signal( string tag, string ctl_tag, string frag
 			$shcmd_finalize; \
 			exit; \
 		fi
+		//===========================================
+		//# For pileup signal tracks
+		//============================================
+		//# Remove coordinates outside chromosome sizes (stupid MACS2 bug)
+		sys slopBed -i "$prefix"_treat_pileup.bdg -g $chrsz -b 0 |   awk '{if ($3 != -1) print $0}' |  bedClip stdin $chrsz $pileup_bedgraph
+		
+		//# Convert bedgraph to bigwig
+		sys sort -S 4G -k1,1 -k2,2n $pileup_bedgraph > $pileup_bedgraph_srt
+		sys bedGraphToBigWig $pileup_bedgraph_srt $chrsz $pileup_bigwig
+		sys rm -f $pileup_bedgraph $pileup_bedgraph_srt
 
 		//===========================================
 		//# For Fold enrichment signal tracks
