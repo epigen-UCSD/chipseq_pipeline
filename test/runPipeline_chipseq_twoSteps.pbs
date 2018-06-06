@@ -59,7 +59,14 @@ wait
 ############################################################
 # Step 2
 ############################################################
-[[ "$ctl" = true ]] && exit 0 # no step 2 for ctl 
+
+if [ "$ctl" = true ]
+then
+    runFastQC_screen.sh $INPREFIX
+    results_transfer.sh $INPREFIX
+    exit 0 # no step 2 for ctl
+fi
+
 [[ ! -z ${no_peak+x} ]] &&  exit 0 # no step 2 if -v no_peak
 
 ctl_id=$(cat $samples | grep true -n |cut -d':' -f1)
@@ -81,7 +88,7 @@ bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
     -nth $PBS_NP \
     -out_dir $outdir \
     -species $genome \
-    -pe -no_xcor \
+    -pe \
     $tag_input 
 
 wait 
@@ -91,10 +98,18 @@ wait
 ############################################################
 
 runFastQC_screen.sh $INPREFIX
-results_transfer.sh $INPREFIX chip 
+results_transfer.sh $INPREFIX  
 
+if [ -n $snap ];then
+    export PATH=$PATH:/home/zhc268/data/software/SNAP-CHIP_epicypher
+    bash epicypher.sh -i $fastq1 -m 2 -k true -o /home/zhc268/data/outputs/libQCs/${INPREFIX}/ 1 | tee ~/data/outputs/libQCs/${INPREFIX}/${INPREFIX}_R1.fastq.gz.snap.cnt.tab &
+    bash epicypher.sh -i $fastq2 -m 2 -k true -o /home/zhc268/data/outputs/libQCs/${INPREFIX}/ 1 | tee ~/data/outputs/libQCs/${INPREFIX}/${INPREFIX}_R2.fastq.gz.snap.cnt.tab
+fi
 
-#eg: qsub  -t 0-2 -v samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 
+wait 
+#eg: qsub  -t 0-2 -v samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs
+
+#eg: qsub  -t 0-2 -v snap="true",samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 
 
 #eg:qsub -t 0-3 -v samples="/home/zhc268/data/logs/zhc268/run_2018-03-01_AVD_chip.txt",FASTQDIR="/home/zhc268/data/seqdata/",WORKDIR="/home/zhc268/scratch/outputs/" ./runPipeline_chipseq_twoSteps.pbs
 
