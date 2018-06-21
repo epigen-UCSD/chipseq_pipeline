@@ -263,28 +263,6 @@ def plot_gc(data_file):
 
     return b64encode(plot_img.getvalue())
 
-def run_preseq(bam_w_dups, prefix):
-    '''
-     Runs preseq. Look at preseq data output to get PBC/NRF.
-    '''
-    # First sort because this file no longer exists...
-    sort_bam = 'samtools sort -o {1}.sorted.bam -T {1} -@ 2 {0}'.format(
-        bam_w_dups, prefix)
-    os.system(sort_bam)
-
-    logging.info('Running preseq...')
-    preseq_data = '{0}.preseq.dat'.format(prefix)
-    preseq_log = '{0}.preseq.log'.format(prefix)
-    preseq = ('preseq lc_extrap '
-              '-P -B -o {0} {1}.sorted.bam -v 2> {2}').format(preseq_data,
-                                                              prefix,
-                                                              preseq_log)
-    logging.info(preseq)
-    os.system(preseq)
-    os.system('rm {0}.sorted.bam'.format(prefix))
-    return preseq_data, preseq_log
-
-
 def get_encode_complexity_measures(pbc_output):
     '''
     Gets the unique count statistics from the filtered bam file,
@@ -1034,7 +1012,6 @@ def main():
                                          OUTPUT_PREFIX)
 
     # Library complexity:  NRF, PBC1, PBC2
-    preseq_data, preseq_log = run_preseq(ALIGNED_BAM, OUTPUT_PREFIX) # SORTED BAM
     encode_lib_metrics = get_encode_complexity_measures(PBC_LOG)
 
     # Filtering metrics: duplicates, map quality
