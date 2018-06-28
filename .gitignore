@@ -2,3 +2,5 @@
 .*.swp
 .nfs*
 /test/chipseq.bds.*
+*DS_Store
+*\#* 

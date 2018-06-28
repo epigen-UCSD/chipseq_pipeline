@@ -1944,8 +1944,10 @@ string html_chipseq_tracks() {
 	if ( fc_bigwig.hasKey( "pooled" ) )   { trk_types += "bigwig"; trk_names += "$title fc (pooled)";   trk_colors += color; trk_files += fc_bigwig{"pooled"}   }
 	for (int rep=1; rep<=get_num_rep(); rep++) {
 		color = get_predefined_rgb_str( rep )
-		if ( pval_bigwig.hasKey( "rep$rep" ) ) { trk_types += "bigwig"; trk_names += "$title pval (rep$rep)"; trk_colors += color; trk_files += pval_bigwig{"rep$rep"} }
-		if ( fc_bigwig.hasKey( "rep$rep" ) )   { trk_types += "bigwig"; trk_names += "$title fc (rep$rep)"; trk_colors += color;   trk_files += fc_bigwig{"rep$rep"}   }
+		if ( pval_bigwig.hasKey( "$rep" ) ) { trk_types += "bigwig"; trk_names += "$title pval (rep$rep)"; trk_colors += color; trk_files += pval_bigwig{"$rep"} }
+		if ( fc_bigwig.hasKey( "$rep" ) )   { trk_types += "bigwig"; trk_names += "$title fc (rep$rep)"; trk_colors += color;   trk_files += fc_bigwig{"$rep"}   }
+		if ( peak.hasKey("$peak_caller,$rep") ) {trk_types += "hammock"; trk_names += "$title peak (rep$rep)"; trk_colors += color; trk_files += peak_to_hammock( peak{"$peak_caller,$rep"} )}
+		
 	}
 	color = get_predefined_rgb_str( 0 ) // color for pooled reps
 		//if ( is_histone_chipseq() ) {
