@@ -1934,11 +1934,11 @@ string html_chipseq_tracks() {
 	string[] trk_files, trk_types, trk_names, trk_colors
 	string color
 
-	for (int rep=1; rep<=get_num_rep(); rep++) {
-		group := get_group_name( 0, rep )
-		color = get_predefined_rgb_str( rep )
-		if ( bam.hasKey(group) )      { trk_types += "bam"; trk_names += "$title bam ($group)"; trk_colors += color; trk_files += bam{group} }
-	}
+								 //for (int rep=1; rep<=get_num_rep(); rep++) {
+								 //		group := get_group_name( 0, rep )
+								 //		color = get_predefined_rgb_str( rep )
+								 //		if ( bam.hasKey(group) )      { trk_types += "bam"; trk_names += "$title bam ($group)"; trk_colors += color; trk_files += bam{group} }
+								 //	}
 	color = get_predefined_rgb_str( 0 ) // color for pooled reps
 	if ( pval_bigwig.hasKey( "pooled" ) ) { trk_types += "bigwig"; trk_names += "$title pval (pooled)"; trk_colors += color; trk_files += pval_bigwig{"pooled"} }
 	if ( fc_bigwig.hasKey( "pooled" ) )   { trk_types += "bigwig"; trk_names += "$title fc (pooled)";   trk_colors += color; trk_files += fc_bigwig{"pooled"}   }
@@ -1948,10 +1948,10 @@ string html_chipseq_tracks() {
 		if ( fc_bigwig.hasKey( "rep$rep" ) )   { trk_types += "bigwig"; trk_names += "$title fc (rep$rep)"; trk_colors += color;   trk_files += fc_bigwig{"rep$rep"}   }
 	}
 	color = get_predefined_rgb_str( 0 ) // color for pooled reps
-	// if ( is_histone_chipseq() ) {
-	// 	if ( peak_overlap ) { trk_types += "hammock"; trk_names += "$title peak overlap"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap ) }
+		//if ( is_histone_chipseq() ) {
+		//	if ( peak_overlap ) { trk_types += "hammock"; trk_names += "$title peak overlap"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap ) }
 	// 	if ( gpeak_overlap ) { trk_types += "hammock"; trk_names += "$title gpeak overlap"; trk_colors += color; trk_files += peak_to_hammock( gpeak_overlap ) }
-	// }
+		//}
 	if ( peak_overlap_opt ) {trk_types += "hammock"; trk_names += "$title peak overlap (opt. set)"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap_opt ) }
 	if ( peak_overlap_consv ) {trk_types += "hammock"; trk_names += "$title peak overlap (cons. set)"; trk_colors += color; trk_files += peak_to_hammock( peak_overlap_consv ) }
 	for (int rep=1; rep<=get_num_rep(); rep++) {
