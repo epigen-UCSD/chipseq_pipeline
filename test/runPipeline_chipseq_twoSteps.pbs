@@ -25,6 +25,8 @@ genome=${samplenames[${PBS_ARRAYID}*3+1]}
 ctl=${samplenames[${PBS_ARRAYID}*3+2]} #control or treatment
 fastq1="${FASTQDIR}/${INPREFIX}_R1.fastq.gz"
 fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
+[[ ! -f $fastq1 ]] && { echo "fastq1 not found"; exit 0; }
+[[ ! -f $fastq2 ]] && { echo "fastq2 not found"; exit 0; } 
 
 
 # parameters
@@ -63,7 +65,7 @@ wait
 if [ "$ctl" = true ]
 then
     runFastQC_screen.sh $INPREFIX
-    results_transfer.sh $INPREFIX
+    results_transfer.sh $INPREFIX zhc268
     exit 0 # no step 2 for ctl
 fi
 
@@ -98,7 +100,7 @@ wait
 ############################################################
 
 runFastQC_screen.sh $INPREFIX
-results_transfer.sh $INPREFIX  
+results_transfer.sh $INPREFIX  zhc268
 
 if [ -n $snap ];then
     export PATH=$PATH:/home/zhc268/data/software/SNAP-CHIP_epicypher
