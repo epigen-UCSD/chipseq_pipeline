@@ -88,7 +88,7 @@ string peak_overlap_qc
 string{} peak_overlap_qc_FRiP
 
 string{} sig_trk 	 	// signal tracks from deepTools or bamCoverage: map with key ("$ctl,$rep")
-string{} pval_bigwig, fc_bigwig // signal track from macs2
+string{} pval_bigwig, fc_bigwig, pileup_bigwig // signal track from macs2
 string num_peak_log
 
 string{} chipqc_qc
@@ -1193,7 +1193,7 @@ void call_peaks() {
 		macs2_pooled_o_dir     := mkdir( "$macs2_o_dir/pooled_rep" )
 		macs2_pooled_sig_o_dir := mkdir( "$macs2_sig_o_dir/pooled_rep" )
 
-		( peak_pooled{"macs2"}, fc_bigwig{"pooled"}, pval_bigwig{"pooled"} ) = \
+		( peak_pooled{"macs2"}, fc_bigwig{"pooled"}, pval_bigwig{"pooled"} , pileup_bigwig{"pooled"}) = \
 				macs2_chipseq_npeak_and_signal( tag{"pooled_rep"}, tag_ctl{"pooled"}, fraglen_mean, \
 				true, macs2_pooled_o_dir, macs2_pooled_sig_o_dir, "pooled_rep" )
 		if ( peak_caller == "macs2" ) {
@@ -1214,6 +1214,7 @@ void call_peaks() {
 		}
 		add_file_to_report( fc_bigwig{"pooled"}, "signal fc", "pooled_rep", "Signal tracks/MACS2/Pooled replicate/Fold enrichment" )
 		add_file_to_report( pval_bigwig{"pooled"}, "signal p-val", "pooled_rep", "Signal tracks/MACS2/Pooled replicate/P-value" )
+		add_file_to_report( pileup_bigwig{"pooled"}, "signal pileup", "pooled_rep", "Signal tracks/MACS2/Pooled replicate/Pileup" )		
 
 		if ( !true_rep ) {
 			// spp
@@ -1329,7 +1330,7 @@ void call_peaks() {
 			macs2_true_o_dir	:= mkdir( "$macs2_o_dir/rep$rep" )
 			macs2_true_sig_dir 	:= mkdir( "$macs2_sig_o_dir/rep$rep" )
 
-			( peak{"macs2,$rep"}, fc_bigwig{rep}, pval_bigwig{rep} ) = \
+				( peak{"macs2,$rep"}, fc_bigwig{rep}, pval_bigwig{rep}, pileup_bigwig{rep} ) = \
 				macs2_chipseq_npeak_and_signal( tag{"rep$rep"}, tag_ctl{rep}, fraglen_true{rep}, true, macs2_true_o_dir, macs2_true_sig_dir, "rep$rep" )
 
 			if ( peak_caller == "macs2" ) {
@@ -1349,6 +1350,7 @@ void call_peaks() {
 			}
 			add_file_to_report( fc_bigwig{rep}, "signal fc", "rep$rep", "Signal tracks/MACS2/Replicate $rep/Fold enrichment" )
 			add_file_to_report( pval_bigwig{rep}, "signal p-val", "rep$rep", "Signal tracks/MACS2/Replicate $rep/P-value" )
+			add_file_to_report( pileup_bigwig{rep}, "signal pileup", "rep$rep", "Signal tracks/MACS2/Replicate $rep/Pileup" )				
 		}
 
 		if ( !true_rep ) {
@@ -1940,11 +1942,13 @@ string html_chipseq_tracks() {
 								 //		if ( bam.hasKey(group) )      { trk_types += "bam"; trk_names += "$title bam ($group)"; trk_colors += color; trk_files += bam{group} }
 								 //	}
 	color = get_predefined_rgb_str( 0 ) // color for pooled reps
-	if ( pval_bigwig.hasKey( "pooled" ) ) { trk_types += "bigwig"; trk_names += "$title pval (pooled)"; trk_colors += color; trk_files += pval_bigwig{"pooled"} }
+								 //if ( pval_bigwig.hasKey( "pooled" ) ) { trk_types += "bigwig"; trk_names += "$title pval (pooled)"; trk_colors += color; trk_files += pval_bigwig{"pooled"} }
+	if ( pileup_bigwig.hasKey( "pooled" ) )   { trk_types += "bigwig"; trk_names += "$title FPMR (pooled)";   trk_colors += color; trk_files += pileup_bigwig{"pooled"}   }									 
 	if ( fc_bigwig.hasKey( "pooled" ) )   { trk_types += "bigwig"; trk_names += "$title fc (pooled)";   trk_colors += color; trk_files += fc_bigwig{"pooled"}   }
+
 	for (int rep=1; rep<=get_num_rep(); rep++) {
 		color = get_predefined_rgb_str( rep )
-		if ( pval_bigwig.hasKey( "$rep" ) ) { trk_types += "bigwig"; trk_names += "$title pval (rep$rep)"; trk_colors += color; trk_files += pval_bigwig{"$rep"} }
+		if ( pileup_bigwig.hasKey( "$rep" ) ) { trk_types += "bigwig"; trk_names += "$title FPMR (rep$rep)"; trk_colors += color; trk_files += pileup_bigwig{"$rep"} }
 		if ( fc_bigwig.hasKey( "$rep" ) )   { trk_types += "bigwig"; trk_names += "$title fc (rep$rep)"; trk_colors += color;   trk_files += fc_bigwig{"$rep"}   }
 		if ( peak.hasKey("$peak_caller,$rep") ) {trk_types += "hammock"; trk_names += "$title peak (rep$rep)"; trk_colors += color; trk_files += peak_to_hammock( peak{"$peak_caller,$rep"} )}
 		

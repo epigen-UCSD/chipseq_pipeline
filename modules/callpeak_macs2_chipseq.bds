@@ -80,7 +80,7 @@ string[] macs2_chipseq_npeak_and_signal( string tag, string ctl_tag, string frag
 	int_cap_num_peak_macs2 := parse_number( cap_num_peak_macs2 )
 
 	in 	:= (ctl_tag != "") ? [ tag, ctl_tag ] : [ tag ]
-	out 	:= make_sig ? [ npeakfile, pileup_bigwig, fc_bigwig, pval_bigwig ] : [ npeakfile ]
+	out 	:= make_sig ? [ npeakfile,  fc_bigwig, pval_bigwig, pileup_bigwig ] : [ npeakfile ]
 
 	taskName:= "macs2 n/s " + group
 	mem := get_res_mem(mem_macs2,1);	timeout := get_res_wt(wt_macs2)
