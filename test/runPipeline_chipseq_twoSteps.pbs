@@ -99,7 +99,7 @@ wait
 # runFastQC & fastq_screen
 ############################################################
 
-#runFastQC_screen.sh $INPREFIX
+runFastQC_screen.sh $INPREFIX
 results_transfer.sh $INPREFIX  zhc268
 
 if [ -n $snap ];then
