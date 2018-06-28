@@ -1,4 +1,5 @@
 #/bin/bash
+source activate aquas_chipseq
 
 # input
 samples=$1
@@ -7,9 +8,6 @@ FASTQDIR=$3
 WORKDIR=$4
 PBS_NP=1
 
-source activate aquas_chipseq
-
-
 # select libs
 samplenames=(`cat $samples`)
 INPREFIX=${samplenames[${PBS_ARRAYID}*3]} #index start from 0
@@ -17,8 +15,8 @@ genome=${samplenames[${PBS_ARRAYID}*3+1]}
 ctl=${samplenames[${PBS_ARRAYID}*3+2]} #control or treatment
 fastq1="${FASTQDIR}/${INPREFIX}_R1.fastq.gz"
 fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
-[[ ! -f $fastq1 ]] && {echo "fastq1 not found"; exit 0;}
-[[ ! -f $fastq2 ]] && {echo "fastq2 not found"; exit 0;}
+[[ ! -f $fastq1 ]] && { echo "fastq1 not found"; exit 0; }
+[[ ! -f $fastq2 ]] && { echo "fastq2 not found"; exit 0; }
 
 
 # parameters

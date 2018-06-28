@@ -347,9 +347,14 @@ string html_epg_browser_viz( string[] files, string[] types, string[] names, str
 					'  "qtc" : { "forwardcolor" : "'+hex+'", "reversecolor" : "'+hex+'",'+color_str+'} },'
 		}
 		else if ( type == "bigwig") {
+			if (trackname.indexOf("FPMR") > -1) {
+							json 	+= 	'{ "type": "bigwig", "name": "'+trackname+'", "url": "'+url+'", "mode": 1,' + \
+					'  "qtc" : { "height": 20, "summeth":2, "smooth":3, '+color_str+' ,"thtype":1, "thmin":2, "thmax":3  } },'
+			}else{
 			// deep pink
 			json 	+= 	'{ "type": "bigwig", "name": "'+trackname+'", "url": "'+url+'", "mode": 1,' + \
-					'  "qtc" : { "height": 20, "summeth":2, "smooth":3, '+color_str+' ,"thtype":1, "thmin":2, "thmax":40  } },'
+					'  "qtc" : { "height": 20, "summeth":2, "smooth":3, '+color_str+' ,"thtype":1, "thmin":2, "thmax":25  } },'
+			}
 		}
 		else if ( type == "hammock") { // peak must be converted to hammock type (browser specific format)	
 			if ( file.indexOf(".IDR") > -1 ) { // bIDR narrowpeak has 11th (local IDR) and 12th (global IDR) columns
