@@ -18,8 +18,13 @@ source activate aquas_chipseq
 
 
 
-# select libs 
+# select libs
+WORKDIR="/oasis/tscc/scratch/$(whoami)/outputs/"
+FASTQDIR="/projects/ps-epigen/seqdata/"
+
 samplenames=(`cat $samples`)
+snap='true'
+
 INPREFIX=${samplenames[${PBS_ARRAYID}*3]} #index start from 0
 genome=${samplenames[${PBS_ARRAYID}*3+1]}
 ctl=${samplenames[${PBS_ARRAYID}*3+2]} #control or treatment
@@ -100,12 +105,12 @@ wait
 ############################################################
 
 runFastQC_screen.sh $INPREFIX
-results_transfer.sh $INPREFIX  zhc268
+results_transfer.sh $INPREFIX  $(whoami)
 
 if [ -n $snap ];then
-    export PATH=$PATH:/home/zhc268/data/software/SNAP-CHIP_epicypher
-    bash epicypher.sh -i $fastq1 -m 2 -k true -o /home/zhc268/data/outputs/libQCs/${INPREFIX}/ 1 | tee ~/data/outputs/libQCs/${INPREFIX}/${INPREFIX}_R1.fastq.gz.snap.cnt.tab &
-    bash epicypher.sh -i $fastq2 -m 2 -k true -o /home/zhc268/data/outputs/libQCs/${INPREFIX}/ 1 | tee ~/data/outputs/libQCs/${INPREFIX}/${INPREFIX}_R2.fastq.gz.snap.cnt.tab
+    export PATH=$PATH:/projects/ps-epigen/software/SNAP-CHIP_epicypher
+    bash epicypher.sh -i $fastq1 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}_R1.fastq.gz.snap.cnt.tab &
+    bash epicypher.sh -i $fastq2 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}_R2.fastq.gz.snap.cnt.tab
 fi
 
 wait 
@@ -113,6 +118,6 @@ wait
 
 #eg: qsub  -t 0-2 -v snap="true",samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 
 
-#eg:qsub -t 0-3 -v samples="/home/zhc268/data/logs/zhc268/run_2018-03-01_AVD_chip.txt",FASTQDIR="/home/zhc268/data/seqdata/",WORKDIR="/home/zhc268/scratch/outputs/" ./runPipeline_chipseq_twoSteps.pbs
+#eg:qsub -t 0-3 -v samples="/projects/ps-epigen/logs/zhc268/run_2018-03-01_AVD_chip.txt",FASTQDIR="/projects/ps-epigen/seqdata/",WORKDIR="/home/zhc268/scratch/outputs/" ./runPipeline_chipseq_twoSteps.pbs
 
-#eg: qsub -t 0-13 -v samples="/home/zhc268/data/logs/zhc268/run_2018-05-02_avdchip.txt",FASTQDIR="/home/zhc268/data/seqdata/",WORKDIR="/home/zhc268/scratch/outputs/" ./test/runPipeline_chipseq_twoSteps.pbs
+#eg: qsub -t 0-13 -v samples="/projects/ps-epigen/logs/zhc268/run_2018-05-02_avdchip.txt",FASTQDIR="/projects/ps-epigen/seqdata/",WORKDIR="/home/zhc268/scratch/outputs/" ./test/runPipeline_chipseq_twoSteps.pbs
