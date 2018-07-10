@@ -68,7 +68,7 @@ wait
 
 if [ "$ctl" = true ]
 then
-    runFastQC_screen.sh $INPREFIX
+    runFastQC_screen_se.sh $INPREFIX
     results_transfer.sh $INPREFIX $(whoami)
     exit 0 # no step 2 for ctl
 fi
