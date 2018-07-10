@@ -28,10 +28,9 @@ snap='true'
 INPREFIX=${samplenames[${PBS_ARRAYID}*3]} #index start from 0
 genome=${samplenames[${PBS_ARRAYID}*3+1]}
 ctl=${samplenames[${PBS_ARRAYID}*3+2]} #control or treatment
-fastq1="${FASTQDIR}/${INPREFIX}_R1.fastq.gz"
-fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
-[[ ! -f $fastq1 ]] && { echo "fastq1 not found"; exit 0; }
-[[ ! -f $fastq2 ]] && { echo "fastq2 not found"; exit 0; } 
+fastq="${FASTQDIR}/${INPREFIX}.fastq.gz"
+[[ ! -f $fastq ]] && { echo "fastq not found"; exit 0; }
+
 
 
 # parameters
@@ -43,8 +42,8 @@ outdir="${WORKDIR}${INPREFIX}"; mkdir -p $outdir
 ############################################################
 # Step 1
 ############################################################
-fastq_input="-fastq1_1 ${fastq1} -fastq1_2 ${fastq2}"
-[[ "$ctl" = true ]] && fastq_input="-ctl_fastq1_1 ${fastq1} -ctl_fastq1_2 ${fastq2}"
+fastq_input="-fastq1 ${fastq}"
+[[ "$ctl" = true ]] && fastq_input="-ctl_fastq1 ${fastq}"
 
 #final_stage="filt_bam"
 final_stage="xcor"
@@ -70,7 +69,7 @@ wait
 if [ "$ctl" = true ]
 then
     runFastQC_screen.sh $INPREFIX
-    results_transfer.sh $INPREFIX zhc268
+    results_transfer.sh $INPREFIX $(whoami)
     exit 0 # no step 2 for ctl
 fi
 
@@ -83,7 +82,7 @@ input_dir="${WORKDIR}${ctl_name}/align";
 ctl_prefix="$input_dir/ctl1/${samplenames[${ctl_id}*3]}" #index start from 0
 tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*3]}" #index start from 0
 #tag_suffix="_R1.PE2SE.nodup.tagAlign.gz"
-tag_suffix="_R1.PE2SE.nodup.bam"
+tag_suffix=".nodup.bam"
 #tag_input="-tag ${tr_prefix}${tag_suffix} -ctl_tag ${ctl_prefix}${tag_suffix}"
 tag_input="-filt_bam ${tr_prefix}${tag_suffix} -ctl_filt_bam ${ctl_prefix}${tag_suffix}"
 
@@ -104,13 +103,12 @@ wait
 # runFastQC & fastq_screen
 ############################################################
 
-runFastQC_screen.sh $INPREFIX
+runFastQC_screen_se.sh $INPREFIX
 results_transfer.sh $INPREFIX  $(whoami)
 
 if [ -n $snap ];then
     export PATH=$PATH:/projects/ps-epigen/software/SNAP-CHIP_epicypher
-    bash epicypher.sh -i $fastq1 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}_R1.fastq.gz.snap.cnt.tab &
-    bash epicypher.sh -i $fastq2 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}_R2.fastq.gz.snap.cnt.tab
+    bash epicypher.sh -i $fastq1 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}.fastq.gz.snap.cnt.tab & sleep 1
 fi
 
 wait 
