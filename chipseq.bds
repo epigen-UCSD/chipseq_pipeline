@@ -40,7 +40,8 @@ help() // print help and exit if no parameters are given
 include "modules/pipeline_template.bds"
 
 include "modules/input.bds"
-
+																																					  //include "modules/fastqc_screen.bds"
+																																					  
 include "modules/align_bwa.bds"
 include "modules/align_trim_fastq.bds"
 include "modules/postalign_bam.bds"
@@ -102,7 +103,8 @@ void main() { // chipseq pipeline starts here
 	chk_param() // check if parameters are valid
 	chk_input( true_rep, no_pseudo_rep ) // if inputs are fastq, bam, or tagalign, check if they exist
 
-	align() // align and postalign
+		//		fastqc_screen() // fastqc & screen 
+    align() // align and postalign
 	jsd() // plot fingerprint and compute synthetic JS distance
             chipqc() 
         
@@ -346,6 +348,55 @@ void chk_param() {
 
 	// if ( sig_trk_for_pooled_rep_only && macs2_for_idr ) \
 	// 	error("-sig_trk_for_pooled_rep_only and -macs2_for_idr are mutally exclusive parameters!\n")
+}
+
+void fastqc_screen() {
+	if ( is_input_peak() ) return
+	// distribute # of threads to each replicate/control according to their file sizes
+	// different weight for each data type 3 for fastq, 5 for tagaligns, 1 for others
+
+	int{} filesize
+
+	for ( int ctl=0; ctl <= 1; ctl++) { // iterate through inputs (ctl==0 : exp. replicate, ctl==1 : control)
+		if ( ctl==1 && !ctl_exists() ) continue
+
+		for ( int rep=1; rep <= get_num_rep( ctl ); rep++) {		
+			if ( !input_file_exists( ctl, rep ) ) continue
+
+			// check file size to distribute_nonzero nth to each nth_app
+			// determine # threads for each app related to alignment
+
+			group := get_group_name( ctl, rep )
+
+			// get file size in bytes
+			if ( is_input_fastq( ctl, rep ) ) {
+				fastqs := get_fastqs( ctl, rep )
+				filesize{group} = (fastqs[0]).size()*3 // multiply 3 (weight) to allocate more cpus for align
+				if ( fastqs.size() > 1) filesize{group} += (fastqs[1]).size()
+			} else return
+		}
+	}
+
+	nth_rep := distribute_nonzero( nth, filesize )
+
+	// align
+	
+	for ( int ctl=0; ctl <= 1; ctl++) { // iterate through inputs (ctl==0 : exp. replicate, ctl==1 : control)
+		if ( ctl==1 && !ctl_exists() ) continue		
+
+		for ( int rep=1; rep <= get_num_rep( ctl ); rep++) {
+
+			if ( !input_file_exists( ctl, rep ) ) continue
+
+			group := get_group_name( ctl, rep )
+
+			if ( no_par ) fastqc_screen( ctl, rep, nth_rep{group} ) // parallel jobs for align() for each replicate and each control
+			else	  par fastqc_screen( ctl, rep, nth_rep{group} ) // parallel jobs for align() for each replicate and each control
+		}
+	}
+	wait
+							   
+	print( "\n== Done fastqc_screen()\n" )							   
 }
 
 void align() {

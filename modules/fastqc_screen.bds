@@ -1,0 +1,219 @@
+#!/usr/bin/env bds
+#vim: syntax=java
+
+include "species.bds"
+include "module_template.bds"
+
+
+help == fastqc_screen settings 
+param_fs	:= "--tag --force --subset 100000" 	help Parameters for fastq_screen (default: "--tag --force --subset 100000"). 
+wt_fs		:= "47h"		help Walltime for fastq_screen (default: 47, 47:00:00).
+mem_fs		:= "12G"	 	help Max. memory for bwa (default: 12G).
+
+
+grp_color_bwa	:= "salmon"
+
+
+init_fastqc_screen()
+
+
+void init_fastqc_screen() {
+
+	param_fs 	= get_conf_val( param_fs, 	["param_fs"] )
+	wt_fs 		= get_conf_val( wt_bwa, 	["wt_fs"] )
+	mem_fs 	= get_conf_val( mem_bwa, 	["mem_fs"] )
+
+	print("\n\n== fastqc_screen settings\n")
+	print( "Param. for fastq_screen\t\t\t: $param_fs\n")
+	print( "Walltime (fastqc_screen)\t\t\t: $wt_fs\n")
+	print( "Max. memory (fastqc_screen)\t\t: $mem_fs\n")
+}
+
+
+string[] fs( string fastq, string o_dir, string log_o_dir, string group, int nth_fs ) {
+
+	prefix 	:= replace_dir( rm_ext( fastq, ["fastq","fq"] ), o_dir )
+	prefix2 := replace_dir( prefix, log_o_dir )
+	bam 	:= "$prefix.bam"
+	qc 	:= "$prefix2.flagstat.qc"
+
+	in 	:= [ fastq ]
+	out 	:= [ bam, qc ]
+
+	if ( out <- in ) { // compare file timestamps of in and out (to check if job is already done or not)
+
+		sai := fs_aln( fastq, o_dir, group, nth_fs )
+		wait
+
+		fs_sam( fastq, sai, o_dir, log_o_dir, group, nth_fs )
+		wait
+
+		sai.rm() // delete intermediate file sai		
+	}
+
+	add_task_to_graph( in, out, group, "FS\\n(SE)", grp_color_fs )
+
+	return out
+}
+
+string[] fs_PE( string fastq1, string fastq2, string o_dir, string log_o_dir, string group, int nth_fs ) {
+
+	prefix 	:= replace_dir( rm_ext( fastq1, ["fastq","fq"] ), o_dir ) + ".PE2SE"
+	prefix2 := replace_dir( prefix, log_o_dir )
+	bam 	:= "$prefix.bam"
+	qc 	:= "$prefix2.flagstat.qc"
+
+	in 	:= [ fastq1, fastq2 ]
+	out 	:= [ bam, qc ]
+
+	if ( out <- in ) { // compare file timestamps of in and out (to check if job is already done or not)
+
+		nth_fs_aln := distribute_nonzero( nth_fs, [1,1] )
+
+		// parallel jobs
+		sai1 := fs_aln( fastq1, o_dir, group+"_1", nth_fs_aln[0] )
+		sai2 := fs_aln( fastq2, o_dir, group+"_2", nth_fs_aln[1] )
+
+		wait
+
+		fs_sam_PE( fastq1, fastq2, sai1, sai2, o_dir, log_o_dir, group, nth_fs )
+		wait
+		
+		sai1.rm() // delete intermediate file sai1, sai2
+		sai2.rm()
+	}
+
+	add_task_to_graph( in, out, group, "FS\\n(PE)", grp_color_fs )
+
+	return out
+}
+
+string fs_aln( string fastq, string o_dir, string group, int nth_fs ) {
+
+	prefix 	:= replace_dir( rm_ext( fastq, ["fastq","fq"] ), o_dir )
+	sai 	:= "$prefix.sai"	
+	
+	in 	:= [ fastq ]
+	out 	:= sai
+
+	taskName:= "fs_aln " + group
+	cpus 	:= (nth_fs==1) ? -1 : nth_fs;	mem := get_res_mem(mem_fs,nth_fs); timeout := get_res_wt(wt_fs)
+
+	wait_par( cpus )
+
+	tid := task( out<-in ) {
+
+		sys $shcmd_init
+
+		//# Map reads to create raw SAM file
+		sys fs aln $param_fs_aln -t $nth_fs $fs_idx $fastq > $sai
+
+		sys $shcmd_finalize
+	}
+
+	register_par( tid, cpus )
+
+	add_task_to_graph( in, out, group )
+
+	return out
+}
+
+string[] fs_sam( string fastq, string sai, string o_dir, string log_o_dir, string group, int nth_fs ) {
+
+	prefix 	:= replace_dir( rm_ext( fastq, ["fastq","fq"] ), o_dir )
+	prefix2 := replace_dir( prefix, log_o_dir )
+	bam 	:= "$prefix.bam"
+	qc	:= "$prefix2.flagstat.qc"
+
+	in 	:= [ fastq, sai ]
+	out 	:= [ bam, qc ]
+
+	taskName:= "fs_sam " + group
+	cpus 	:= nth_fs; 	mem := get_res_mem(mem_fs,nth_fs);	timeout := get_res_wt(wt_fs)
+
+	wait_par( cpus )
+
+	tid := task( out<-in ) {
+
+		sys $shcmd_init
+
+		sys fs samse $fs_idx $sai $fastq | samtools view -Su - | samtools sort - $prefix
+		sys samtools index $bam
+		sys samtools flagstat $bam > $qc
+		//sys fs samse $fs_idx $sai $fastq | samtools view -Su /dev/stdin \
+		//	| sambamba sort -t 1 /dev/stdin -o $bam
+		//sys sambamba flagstat -t 1 $bam > $qc
+
+		sys $shcmd_finalize
+	}
+
+	register_par( tid, cpus )
+
+	add_task_to_graph( in, out, group )
+
+	return out
+}
+
+string[] fs_sam_PE( string fastq1, string fastq2, string sai1, string sai2, string o_dir, string log_o_dir, string group, int nth_fs ) {
+
+	prefix 	:= replace_dir( rm_ext( fastq1, ["fastq","fq"] ), o_dir ) + ".PE2SE"
+	prefix2 := replace_dir( prefix, log_o_dir )
+	sam 	:= "$prefix.sam.gz"
+	badcigar:= "$prefix.badReads"
+	bam 	:= "$prefix.bam"
+	qc	:= "$prefix2.flagstat.qc"
+
+	in 	:= [ fastq1, fastq2, sai1, sai2 ]
+	out 	:= [ bam, qc ]
+
+	taskName:= "fs_sam_PE " + group
+	cpus 	:= nth_fs; 	mem := get_res_mem(mem_fs,nth_fs);	timeout := get_res_wt(wt_fs)
+
+	wait_par( cpus )
+
+	tid := task( out<-in ) {
+
+		sys $shcmd_init
+		
+		sys fs sampe -P $fs_idx $sai1 $sai2 $fastq1 $fastq2 | pigz -p $nth_fs -nc > $sam
+
+		//# Remove read pairs with bad CIGAR strings and sort by position
+
+		//# Find bad CIGAR read names
+		//sys zcat $sam \
+		//	| awk 'BEGIN {FS="\t" ; OFS="\t"} ! /^@/ && $6!="*" { cigar=$6; gsub("[0-9]+D","",cigar); n = split(cigar,vals,"[A-Z]"); s = 0; for (i=1;i<=n;i++) s=s+vals[i]; seqlen=length($10) ; if (s!=seqlen) print $1"\t"; }' \
+		//	| sort | uniq > $badcigar
+
+		sys pigz -p $nth_fs -cd $sam \
+			| awk 'BEGIN {FS="\t" ; OFS="\t"} ! /^@/ && $6!="*" { cigar=$6; gsub("[0-9]+D","",cigar); n = split(cigar,vals,"[A-Z]"); s = 0; for (i=1;i<=n;i++) s=s+vals[i]; seqlen=length($10) ; if (s!=seqlen) print $1"\t"; }' \
+			| sort | uniq > $badcigar
+
+		//# Remove bad CIGAR read pairs
+		sys if [ $(cat $badcigar | wc -l) -gt 0 ]; then \
+				zcat $sam | grep -v -F -f $badcigar | samtools view -Su - | samtools sort - $prefix; \
+			else \
+				samtools view -Su $sam | samtools sort - $prefix; \
+			fi
+		//sys if [ $(cat $badcigar | wc -l) -gt 0 ]; then \
+		//		pigz -p $nth_fs -cd $sam | grep -v -F -f $badcigar | samtools view -Su /dev/stdin \
+		//		| sambamba sort -t 1 /dev/stdin -o $bam; \
+		//	else \
+		//		pigz -p $nth_fs -cd $sam | samtools view -Su /dev/stdin | sambamba sort -t 1 /dev/stdin -o $bam; \
+		//	fi
+
+		sys samtools flagstat $bam > $qc
+		sys samtools index $bam
+
+		//sys sambamba flagstat -t 1 > $qc
+		
+		sys rm -f $badcigar $sam
+
+		sys $shcmd_finalize
+	}
+
+	register_par( tid, cpus )
+
+	add_task_to_graph( in, out, group )
+
+	return out
+}
