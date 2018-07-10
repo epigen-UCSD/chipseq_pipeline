@@ -54,7 +54,6 @@ bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
     -final_stage $final_stage \
     -true_rep $true_rep \
     -no_pseudo_rep $no_pseudo_rep \
-    -pe_no_trim_fastq \
     -nth $PBS_NP \
     -out_dir $outdir \
     -species $genome \
@@ -94,7 +93,6 @@ bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
     -nth $PBS_NP \
     -out_dir $outdir \
     -species $genome \
-    -pe \
     $tag_input 
 
 wait 
