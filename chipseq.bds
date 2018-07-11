@@ -350,7 +350,7 @@ void chk_param() {
 	// 	error("-sig_trk_for_pooled_rep_only and -macs2_for_idr are mutally exclusive parameters!\n")
 }
 
-void fastqc_screen() {
+/*void fastqc_screen() {
 	if ( is_input_peak() ) return
 	// distribute # of threads to each replicate/control according to their file sizes
 	// different weight for each data type 3 for fastq, 5 for tagaligns, 1 for others
@@ -397,7 +397,7 @@ void fastqc_screen() {
 	wait
 							   
 	print( "\n== Done fastqc_screen()\n" )							   
-}
+}*/
 
 void align() {
 	if ( is_input_peak() ) return
@@ -542,7 +542,7 @@ void align_SE( int ctl, int rep, int nth_rep ) {
 	if ( is_input_fastq( ctl, rep ) ) {
 
 		fastqs := get_fastqs( ctl, rep )
-
+		print("fastqs:$fastqs,ctl:$ctl,rep:$rep\n")
 		// pool if multiple fastqs
 		string pooled_fastq
 		if ( fastqs.size()==1 ) pooled_fastq = fastqs[0]
@@ -970,7 +970,7 @@ void chipqc(int ctl, int rep ) {
 
     group := get_group_name( ctl, rep )
             long  := get_long_group_name( ctl, rep )
-            fastqs := get_fastq(ctl,rep)
+
 
             qc_o_dir 	:= mkdir( "$out_dir/qc/$group" )
             aln_o_dir 	:= mkdir( "$out_dir/align/$group" ) // create align output directory
@@ -979,7 +979,7 @@ void chipqc(int ctl, int rep ) {
             string chipqc_html
             
             if ( is_se(ctl, rep ) ) {
-                
+				fastqs := get_fastqs(ctl,rep)
                 ( chipqc_html, chipqc_qc{group} ) = chipqc( fastqs[0], "", bam{group}, pbc_qc{group}, \
                                                                dup_qc{group}, filt_bam{group}, tag{group}, qc_o_dir, group )
             }
