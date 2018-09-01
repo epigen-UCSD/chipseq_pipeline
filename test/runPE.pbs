@@ -80,12 +80,10 @@ ctl_id=$(cat $samples | grep true -n |cut -d':' -f1)
 ctl_id=$[$ctl_id-1] #0-based index
 ctl_name=${samplenames[${ctl_id}*3]}
 input_dir="${WORKDIR}${ctl_name}/align"; 
-ctl_prefix="$input_dir/ctl1/${samplenames[${ctl_id}*3]}" #index start from 0
+ctl_bam=$(find $input_dir -name "*.nodup.bam")
 tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*3]}" #index start from 0
-#tag_suffix="_R1.PE2SE.nodup.tagAlign.gz"
 tag_suffix="_R1.PE2SE.nodup.bam"
-#tag_input="-tag ${tr_prefix}${tag_suffix} -ctl_tag ${ctl_prefix}${tag_suffix}"
-tag_input="-filt_bam ${tr_prefix}${tag_suffix} -ctl_filt_bam ${ctl_prefix}${tag_suffix}"
+tag_input="-filt_bam ${tr_prefix}${tag_suffix} -ctl_filt_bam ${ctl_bam}"
 
 # run pipeline
 bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
