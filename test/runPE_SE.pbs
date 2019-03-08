@@ -17,6 +17,7 @@
 source activate aquas_chipseq
 
 
+
 # select libs
 WORKDIR="/oasis/tscc/scratch/$(whoami)/outputs/"
 FASTQDIR="/projects/ps-epigen/seqdata/"
@@ -92,7 +93,7 @@ bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
     -nth $PBS_NP \
     -out_dir $outdir \
     -species $genome \
-    -pe \
+    -pe1 -ctl_se \
     $tag_input 
 
 wait 

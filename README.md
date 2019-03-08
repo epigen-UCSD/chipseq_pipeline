@@ -38,6 +38,7 @@ $bds ~/data/software/chipseq_pipeline/chipseq.bds
 	-pe_xcor_only <bool>                  : (PE ONLY) Align R1 of paired end fastqs only and for cross-correlation analysis. All other analyses and QCs will be disabled.
 	-pe_no_trim_fastq <bool>              : (PE ONLY) No fastq trimming and use PE tagAlign for cross-correlation analysis.
 	-no_jsd <bool>                        : Disable JSD plot generation
+	-disable_gb_peak <bool>               : Disable gapped/broad peak generation    
 	-no_chipqc <bool>                     : Disable advanced chipseq qc
 == configuration file settings
 	-c <string>                           : Configuration file path.

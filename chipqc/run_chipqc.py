@@ -4,60 +4,58 @@
 # 2016-03-28
 # Script to run ataqc, all parts
 
+from matplotlib import mlab
+from matplotlib import pyplot as plt
+from jinja2 import Template
+from scipy.signal import find_peaks_cwt
+from io import BytesIO
+from collections import OrderedDict
+from collections import namedtuple
+from base64 import b64encode
+import re
+import logging
+import argparse
+import scipy.stats
+import pandas as pd
+import numpy as np
+import bz2
+import gzip
+import datetime
+import timeit
+import multiprocessing
+import subprocess
+import metaseq
+import pybedtools
+import pysam
+import sys
+import os
 import matplotlib
 matplotlib.use('Agg')
-
-import os
-import sys
-import pysam
-import pybedtools
-import metaseq
-import subprocess
-import multiprocessing
-import timeit
-import datetime
-import gzip
-import bz2
-import numpy as np
-import pandas as pd
-import scipy.stats
-import argparse
-import logging
-import re
-
-from base64 import b64encode
-from collections import namedtuple
-from collections import OrderedDict
-from io import BytesIO
-from scipy.signal import find_peaks_cwt
-from jinja2 import Template
-from matplotlib import pyplot as plt
-from matplotlib import mlab
 
 
 # utils
 
-def run_shell_cmd(cmd): 
+def run_shell_cmd(cmd):
     """Taken from ENCODE DCC ATAC pipeline
     """
     print cmd
     try:
         p = subprocess.Popen(cmd, shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            preexec_fn=os.setsid)
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True,
+                             preexec_fn=os.setsid)
         pid = p.pid
         pgid = os.getpgid(pid)
         ret = ''
         while True:
             line = p.stdout.readline()
-            if line=='' and p.poll() is not None:
+            if line == '' and p.poll() is not None:
                 break
             # log.debug('PID={}: {}'.format(pid,line.strip('\n')))
             #print('PID={}: {}'.format(pid,line.strip('\n')))
             ret += line
-        p.communicate() # wait here
+        p.communicate()  # wait here
         if p.returncode > 0:
             raise subprocess.CalledProcessError(
                 p.returncode, cmd)
@@ -124,7 +122,7 @@ class QCHasElementInRange(QCCheck):
 
     def check(self, elems):
         return (len([elem for elem in elems
-                    if self.lower <= elem <= self.upper]) > 0)
+                     if self.lower <= elem <= self.upper]) > 0)
 
     def message(self, elems, qc_pass):
         return ('OK' if qc_pass else
@@ -133,17 +131,18 @@ class QCHasElementInRange(QCCheck):
 
 # HELPER FUNCTIONS
 
+
 def getFileHandle(filename, mode="r"):
-    if (re.search('.gz$',filename) or re.search('.gzip',filename)):
-        if (mode=="r"):
-            mode="rb";
-        return gzip.open(filename,mode)
-    elif (re.search('.bz2$',filename)):
-        if(mode=="rb"):
-            mode="r";
-        return bz2.BZ2File(filename,mode)
+    if (re.search('.gz$', filename) or re.search('.gzip', filename)):
+        if (mode == "r"):
+            mode = "rb"
+        return gzip.open(filename, mode)
+    elif (re.search('.bz2$', filename)):
+        if(mode == "rb"):
+            mode = "r"
+        return bz2.BZ2File(filename, mode)
     else:
-        return open(filename,mode)
+        return open(filename, mode)
 
 
 # QC FUNCTIONS
@@ -190,7 +189,7 @@ def get_chr_m(sorted_bam_file):
     logging.info('Getting mitochondrial chromosome fraction...')
     chrom_list = pysam.idxstats(sorted_bam_file, split_lines=True)
     tot_reads = 0
-    chr_m_reads=0
+    chr_m_reads = 0
     for chrom in chrom_list:
         chrom_stats = chrom.split('\t')
         if chrom_stats[0] == 'chrM':
@@ -263,6 +262,7 @@ def plot_gc(data_file):
 
     return b64encode(plot_img.getvalue())
 
+
 def get_encode_complexity_measures(pbc_output):
     '''
     Gets the unique count statistics from the filtered bam file,
@@ -295,7 +295,7 @@ def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge
     '''
     logging.info('Generating tss plot...')
     tss_plot_file = '{0}_tss-enrich.png'.format(prefix)
-    tss_plot_data_file = '{0}_tss-enrich.txt'.format(prefix)    
+    tss_plot_data_file = '{0}_tss-enrich.txt'.format(prefix)
     tss_plot_large_file = '{0}_large_tss-enrich.png'.format(prefix)
 
     # Load the TSS file
@@ -303,17 +303,18 @@ def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge
     tss_ext = tss.slop(b=bp_edge, g=chromsizes)
 
     # Load the bam file
-    bam = metaseq.genomic_signal(bam_file, 'bam') # Need to shift reads and just get ends, just load bed file?
-    bam_array = bam.array(tss_ext, bins=bins, shift_width = -read_len/2, # Shift to center the read on the cut site
+    # Need to shift reads and just get ends, just load bed file?
+    bam = metaseq.genomic_signal(bam_file, 'bam')
+    bam_array = bam.array(tss_ext, bins=bins, shift_width=-read_len/2,  # Shift to center the read on the cut site
                           processes=processes, stranded=True)
 
     # Actually first build an "ends" file
     #get_ends = '''zcat {0} | awk -F '\t' 'BEGIN {{OFS="\t"}} {{if ($6 == "-") {{$2=$3-1; print}} else {{$3=$2+1; print}} }}' | gzip -c > {1}_ends.bed.gz'''.format(bed_file, prefix)
-    #print(get_ends)
-    #os.system(get_ends)
+    # print(get_ends)
+    # os.system(get_ends)
 
     #bed_reads = metaseq.genomic_signal('{0}_ends.bed.gz'.format(prefix), 'bed')
-    #bam_array = bed_reads.array(tss_ext, bins=bins,
+    # bam_array = bed_reads.array(tss_ext, bins=bins,
     #                      processes=processes, stranded=True)
 
     # Normalization (Greenleaf style): Find the avg height
@@ -348,8 +349,7 @@ def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge
     # Print a more complicated plot with lots of info
 
     # write the plot data; numpy object
-    np.savetxt(tss_plot_data_file,bam_array.mean(axis=0),delimiter=",")
-
+    np.savetxt(tss_plot_data_file, bam_array.mean(axis=0), delimiter=",")
 
     # Find a safe upper percentile - we can't use X if the Xth percentile is 0
     upper_prct = 99
@@ -375,7 +375,7 @@ def get_picard_dup_stats(picard_dup_file, paired_status):
     '''
     Parse Picard's MarkDuplicates metrics file
     '''
-    logging.info('Running Picard MarkDuplicates...')
+#    logging.info('Running Picard MarkDuplicates...')
     mark = 0
     dup_stats = {}
     with open(picard_dup_file) as fp:
@@ -384,7 +384,6 @@ def get_picard_dup_stats(picard_dup_file, paired_status):
                 if 'METRICS CLASS' in line:
                     mark = 1
                 continue
-
             if mark == 2:
                 line_elems = line.strip().split('\t')
                 dup_stats['PERCENT_DUPLICATION'] = line_elems[7]
@@ -507,7 +506,7 @@ def get_samtools_flagstat(bam_file):
     return flagstat, mapped_reads
 
 
-def get_fract_mapq(bam_file, paired_status,q=30):
+def get_fract_mapq(bam_file, paired_status, q=30):
     '''
     Runs samtools view to get the fraction of reads of a certain
     map quality ( primary and have mate) 
@@ -517,21 +516,23 @@ def get_fract_mapq(bam_file, paired_status,q=30):
 
     # There is a bug in pysam.view('-c'), so just use subprocess
     if paired_status == 'Paired-ended':
-        cmd="samtools view -c -F 1804 -f 2 -q {0} {1}".format(q,bam_file)
+        cmd = "samtools view -c -F 1804 -f 2 -q {0} {1}".format(q, bam_file)
     else:
-        cmd="samtools view -c -F 1804 -q {0} {1}".format(q,bam_file)
-        
+        cmd = "samtools view -c -F 1804 -q {0} {1}".format(q, bam_file)
+
     num_qreads = int(run_shell_cmd(cmd))
-    tot_reads=get_read_count(bam_file)
+    tot_reads = get_read_count(bam_file)
 
     fract_good_mapq = float(num_qreads)/tot_reads
     return num_qreads, fract_good_mapq
+
 
 def get_read_count(bam):
     '''
     Get total reads from a bam file, need indexed first 
     '''
-    cmd="samtools idxstats {0} 2> /dev/null | awk '{{sum += $3+$4}} END {{print sum}}'".format(bam)
+    cmd = "samtools idxstats {0} 2> /dev/null | awk '{{sum += $3+$4}} END {{print sum}}'".format(
+        bam)
     return int(run_shell_cmd(cmd))
 
 
@@ -579,9 +580,10 @@ def get_fract_reads_in_regions(reads_bed, regions_bed):
     regions_bedtool = pybedtools.BedTool(regions_bed)
 
     if regions_bed is None:
-        return 0,0 
+        return 0, 0
 
-    reads = regions_bedtool.sort().merge().intersect(reads_bedtool, c=True, nonamecheck=True)
+    reads = regions_bedtool.sort().merge().intersect(
+        reads_bedtool, c=True, nonamecheck=True)
 
     read_count = 0
     for interval in reads:
@@ -592,13 +594,12 @@ def get_fract_reads_in_regions(reads_bed, regions_bed):
 
 
 def get_signal_to_noise(final_bed, blacklist_regions,
-                                                prom_regions, enh_regions):
+                        prom_regions, enh_regions):
     '''
     Given region sets, determine whether reads are
     falling in or outside these regions
     '''
     logging.info('signal to noise...')
-
 
     # Blacklist regions
     reads_blacklist, \
@@ -612,11 +613,8 @@ def get_signal_to_noise(final_bed, blacklist_regions,
     # Enh regions
     reads_enh, fract_enh = get_fract_reads_in_regions(final_bed, enh_regions)
 
-
-    return  reads_blacklist, fract_blacklist, \
+    return reads_blacklist, fract_blacklist, \
         reads_prom, fract_prom, reads_enh, fract_enh
-
-
 
 
 def track_reads(reads_list, labels):
@@ -649,6 +647,7 @@ def read_picard_histogram(data_file):
         data = np.loadtxt(fp, skiprows=1)
 
     return data
+
 
 def fragment_length_plot(data_file, peaks=None):
     try:
@@ -903,7 +902,6 @@ it is known that there is a bias for promoters in open chromatin assays.
 # ===========================================================
 
 def parse_args():
-
     '''
     Set up the package to be run from the command line
     '''
@@ -967,7 +965,7 @@ def parse_args():
     PROM = args.prom
     ENH = args.enh
 
-    ## other args
+    # other args
     FASTQ = args.fastq1
     ALIGNED_BAM = args.alignedbam
     COORDSORT_BAM = args.coordsortbam
@@ -976,7 +974,7 @@ def parse_args():
     FINAL_BAM = args.finalbam
     FINAL_BED = args.finalbed
     USE_SAMBAMBA_MARKDUP = args.use_sambamba_markdup
-        
+
     return NAME, OUTPUT_PREFIX, REF, TSS, BLACKLIST, PROM, ENH, \
         GENOME, CHROMSIZES, FASTQ, ALIGNED_BAM, \
         COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM, \
@@ -985,10 +983,9 @@ def parse_args():
 
 def main():
 
-
     # Parse args
     [NAME, OUTPUT_PREFIX, REF, TSS, BLACKLIST, PROM, ENH,
-      GENOME, CHROMSIZES, FASTQ, ALIGNED_BAM,
+     GENOME, CHROMSIZES, FASTQ, ALIGNED_BAM,
      COORDSORT_BAM, DUP_LOG, PBC_LOG, FINAL_BAM,
      FINAL_BED, USE_SAMBAMBA_MARKDUP] = parse_args()
 
@@ -1015,7 +1012,7 @@ def main():
     encode_lib_metrics = get_encode_complexity_measures(PBC_LOG)
 
     # Filtering metrics: duplicates, map quality
-    num_mapq, fract_mapq = get_fract_mapq(ALIGNED_BAM,paired_status)
+    num_mapq, fract_mapq = get_fract_mapq(ALIGNED_BAM, paired_status)
 
     if USE_SAMBAMBA_MARKDUP:
         read_dups, percent_dup = get_sambamba_dup_stats(DUP_LOG, paired_status)
@@ -1046,14 +1043,13 @@ def main():
                                                                       TSS,
                                                                       OUTPUT_PREFIX,
                                                                       CHROMSIZES,
-                                                                     read_len)
+                                                                      read_len)
 
     # Signal to noise: reads in DHS regions vs not, reads falling
     # into blacklist regions
     reads_blacklist, fract_blacklist, \
-    reads_prom, fract_prom, reads_enh, fract_enh = get_signal_to_noise(FINAL_BED,
-                          BLACKLIST,PROM,ENH)
-
+        reads_prom, fract_prom, reads_enh, fract_enh = get_signal_to_noise(FINAL_BED,
+                                                                           BLACKLIST, PROM, ENH)
 
     # Finally output the bar chart of reads
     read_count_data = [first_read_count, first_read_count*fract_mapq,
@@ -1160,7 +1156,7 @@ def main():
                     textfile.write('{0}\t{1}\n'.format(dict_key, dict_value))
         # QC tables go here
         elif isinstance(value, list):
-            if 'bowtie' in value[0]: # Hack, fix this
+            if 'bowtie' in value[0]:  # Hack, fix this
                 continue
             for result in value:
                 textfile.write('{0}\t{1}\n'.format(result.metric,
@@ -1173,6 +1169,7 @@ def main():
     print "Run time:", str(datetime.timedelta(seconds=int(stop - start)))
 
     return None
+
 
 if __name__ == '__main__':
     main()
