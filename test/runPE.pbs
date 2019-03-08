@@ -37,6 +37,7 @@ fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
 type="histone"
 true_rep="true"
 no_pseudo_rep="true"
+
 outdir="${WORKDIR}${INPREFIX}"; mkdir -p $outdir
 
 ############################################################
@@ -110,7 +111,10 @@ if [ -n $snap ];then
     bash epicypher.sh -i $fastq2 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}_R2.fastq.gz.snap.cnt.tab
 fi
 
-wait 
+wait
+
+touch ~/data/outputs/libQCs/${INPREFIX}/.finished.txt
+
 #eg: qsub  -t 0-2 -v samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs
 
 #eg: qsub  -t 0-2 -v snap="true",samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 

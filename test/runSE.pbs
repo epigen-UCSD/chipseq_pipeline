@@ -106,10 +106,13 @@ results_transfer.sh $INPREFIX  $(whoami)
 
 if [ -n $snap ];then
     export PATH=$PATH:/projects/ps-epigen/software/SNAP-CHIP_epicypher
-    bash epicypher.sh -i $fastq1 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}.fastq.gz.snap.cnt.tab & sleep 1
+    bash epicypher.sh -i $fastq -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}.fastq.gz.snap.cnt.tab & sleep 1
 fi
 
-wait 
+wait
+
+touch ~/data/outputs/libQCs/${INPREFIX}/.finished.txt
+
 #eg: qsub  -t 0-2 -v samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs
 
 #eg: qsub  -t 0-2 -v snap="true",samples="$(pwd)/samples.txt",FASTQDIR=$(pwd),WORKDIR="/home/zhc268/scratch/outputs/"  ./runPipeline_chipseq_twoSteps.pbs 

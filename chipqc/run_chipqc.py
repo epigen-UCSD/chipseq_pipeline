@@ -4,33 +4,35 @@
 # 2016-03-28
 # Script to run ataqc, all parts
 
-from matplotlib import mlab
-from matplotlib import pyplot as plt
-from jinja2 import Template
-from scipy.signal import find_peaks_cwt
-from io import BytesIO
-from collections import OrderedDict
-from collections import namedtuple
-from base64 import b64encode
-import re
-import logging
-import argparse
-import scipy.stats
-import pandas as pd
-import numpy as np
-import bz2
-import gzip
-import datetime
-import timeit
-import multiprocessing
-import subprocess
-import metaseq
-import pybedtools
-import pysam
-import sys
-import os
-import matplotlib
+import matlib
 matplotlib.use('Agg')
+
+import os
+import sys
+import pysam
+import pybedtools
+import metaseq
+import subprocess
+import multiprocessing
+import timeit
+import datetime
+import gzip
+import bz2
+import numpy as np
+import pandas as pd
+import scipy.stats
+import argparse
+import logging
+import re
+
+from base64 import b64encode
+from collections import namedtuple
+from collections import OrderedDict
+from io import BytesIO
+from scipy.signal import find_peaks_cwt
+from jinja2 import Template
+from matplotlib import pyplot as plt
+from matplotlib import mlab
 
 
 # utils
@@ -178,7 +180,7 @@ def get_read_length(fastq_file):
             if total_reads_considered >= total_reads_to_consider:
                 break
             line_num += 1
-    logging.info('read length:'+str(max_length))
+    logging.info('read length:' + str(max_length))
     return int(max_length)
 
 
@@ -249,7 +251,7 @@ def plot_gc(data_file):
     ax2.set_ylabel('Mean base quality at GC%')
 
     ax3 = ax.twinx()
-    lin3 = ax3.plot(data['GC'], data['WINDOWS']/np.sum(data['WINDOWS']),
+    lin3 = ax3.plot(data['GC'], data['WINDOWS'] / np.sum(data['WINDOWS']),
                     label='Windows at GC%', color='g')
     ax3.get_yaxis().set_visible(False)
 
@@ -305,7 +307,7 @@ def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge
     # Load the bam file
     # Need to shift reads and just get ends, just load bed file?
     bam = metaseq.genomic_signal(bam_file, 'bam')
-    bam_array = bam.array(tss_ext, bins=bins, shift_width=-read_len/2,  # Shift to center the read on the cut site
+    bam_array = bam.array(tss_ext, bins=bins, shift_width=-read_len / 2,  # Shift to center the read on the cut site
                           processes=processes, stranded=True)
 
     # Actually first build an "ends" file
@@ -321,10 +323,10 @@ def make_tss_plot(bam_file, tss, prefix, chromsizes, read_len, bins=400, bp_edge
     # at the end bins and take fold change over that
     if greenleaf_norm:
         # Use enough bins to cover 100 bp on either end
-        num_edge_bins = int(100/(2*bp_edge/bins))
+        num_edge_bins = int(100 / (2 * bp_edge / bins))
         bin_means = bam_array.mean(axis=0)
         avg_noise = (sum(bin_means[:num_edge_bins]) +
-                     sum(bin_means[-num_edge_bins:]))/(2*num_edge_bins)
+                     sum(bin_means[-num_edge_bins:]  ))/(2*num_edge_bins)
         bam_array /= avg_noise
     else:
         bam_array /= bam.mapped_read_count() / 1e6
@@ -390,7 +392,7 @@ def get_picard_dup_stats(picard_dup_file, paired_status):
                 dup_stats['READ_PAIR_DUPLICATES'] = line_elems[5]
                 dup_stats['READ_PAIRS_EXAMINED'] = line_elems[2]
                 if paired_status == 'Paired-ended':
-                    return 2*int(line_elems[5]), float(line_elems[7])
+                    return 2 * int(line_elems[5]), float(line_elems[7])
                 else:
                     return int(line_elems[4]), float(line_elems[7])
 
@@ -523,7 +525,7 @@ def get_fract_mapq(bam_file, paired_status, q=30):
     num_qreads = int(run_shell_cmd(cmd))
     tot_reads = get_read_count(bam_file)
 
-    fract_good_mapq = float(num_qreads)/tot_reads
+    fract_good_mapq = float(num_qreads) / tot_reads
     return num_qreads, fract_good_mapq
 
 
@@ -544,7 +546,7 @@ def get_final_read_count(first_bam, last_bam):
 
     num_reads_last_bam = get_read_count(last_bam)
     num_reads_first_bam = get_read_count(first_bam)
-    fract_reads_left = float(num_reads_last_bam)/num_reads_first_bam
+    fract_reads_left = float(num_reads_last_bam) / num_reads_first_bam
 
     return num_reads_first_bam, num_reads_last_bam, fract_reads_left
 
@@ -588,7 +590,7 @@ def get_fract_reads_in_regions(reads_bed, regions_bed):
     read_count = 0
     for interval in reads:
         read_count += int(interval[-1])
-    fract_reads = float(read_count)/reads_bedtool.count()
+    fract_reads = float(read_count) / reads_bedtool.count()
 
     return read_count, fract_reads
 
@@ -630,7 +632,7 @@ def track_reads(reads_list, labels):
     ax.bar(ind, reads_list, width, color='b')
     ax.set_ylabel('Read count')
     ax.set_title('Reads at each processing step')
-    ax.set_xticks(ind+width)
+    ax.set_xticks(ind + width)
     ax.set_xticklabels(labels)
 
     plot_img = BytesIO()
@@ -1052,8 +1054,9 @@ def main():
                                                                            BLACKLIST, PROM, ENH)
 
     # Finally output the bar chart of reads
-    read_count_data = [first_read_count, first_read_count*fract_mapq,
-                       first_read_count*fract_mapq*(1-float(percent_dup)),
+    read_count_data = [first_read_count, first_read_count * fract_mapq,
+                       first_read_count * fract_mapq *
+                       (1 - float(percent_dup)),
                        final_read_count]
     read_count_labels = ['Start', 'q>30', 'dups removed',
                          'chrM removed (final)']
