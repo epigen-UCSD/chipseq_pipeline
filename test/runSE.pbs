@@ -47,7 +47,7 @@ then
     tmp=($(echo ${sub_libs[@]./#/${FASTQDIR}}))
     tmp_r1=(${tmp[@]/%/_R1.fastq.gz})
     i=0;for fl in ${tmp_r1[@]};do [[ ! -f $fl ]] && tmp_r1[$i]=${fl/_R1./.};i=$[i+1];echo $i; done 
-    echo "cat ${tmp_r1[@]} > $fq & sleep 1" | bash
+    echo "cat ${tmp_r1[@]} > $fastq & sleep 1" | bash
 fi
 wait 
 
