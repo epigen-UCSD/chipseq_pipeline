@@ -4,7 +4,7 @@
 # 2016-03-28
 # Script to run ataqc, all parts
 
-import matlib
+import matplotlib
 matplotlib.use('Agg')
 
 import os
@@ -1021,10 +1021,11 @@ def main():
     else:
         read_dups, percent_dup = get_picard_dup_stats(DUP_LOG, paired_status)
 
-    mito_dups, fract_dups_from_mito = get_mito_dups(ALIGNED_BAM,
-                                                    OUTPUT_PREFIX,
-                                                    paired_status,
-                                                    use_sambamba=USE_SAMBAMBA_MARKDUP)
+    #mito_dups, fract_dups_from_mito = get_mito_dups(ALIGNED_BAM,
+    #                                                OUTPUT_PREFIX,
+    #                                                paired_status,
+    #                                                use_sambamba=USE_SAMBAMBA_MARKDUP)
+    mito_dups, fract_dups_from_mito = 0, 0
     [flagstat, mapped_count] = get_samtools_flagstat(ALIGNED_BAM)
 
     # Final read statistics

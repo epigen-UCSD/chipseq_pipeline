@@ -10,12 +10,13 @@
 #PBS -m abe
 #PBS -A epigen-group
 
+# parameters: samples, 
+
 ## RUN chipseq using two steps
 # Step 1: process tr & ctl equally before peak calling
 # Step 2: peak calling 
 
 source activate aquas_chipseq
-
 
 
 # select libs
@@ -28,9 +29,27 @@ snap='true'
 INPREFIX=${samplenames[${PBS_ARRAYID}*3]} #index start from 0
 genome=${samplenames[${PBS_ARRAYID}*3+1]}
 ctl=${samplenames[${PBS_ARRAYID}*3+2]} #control or treatment
-fastq="${FASTQDIR}/${INPREFIX}.fastq.gz"
-[[ ! -f $fastq ]] && { echo "fastq not found"; exit 0; }
 
+
+# split name into subnames
+subnames=($(echo $INPREFIX|awk -v FS='_' '{for(i=1;i<=NF;i++) print $i}'))
+n_subnames=${#subnames[@]} # number of subnames split at _
+
+fastq="${FASTQDIR}/${INPREFIX}.fastq.gz"
+[[ ! -f $fastq ]] && [[ $n_subnames -lt 4 ]] && { echo "fastq not found"; exit 0; }
+
+## merge fastq files
+if [ ! -f $fastq ] 
+then       
+    base_id=${subnames[0]}_${subnames[1]}
+    tmp=(${subnames[@]/#/${base_id}_})
+    sub_libs=($(echo ${tmp[@]:2}| sed 's/_1 / /g'))
+    tmp=($(echo ${sub_libs[@]./#/${FASTQDIR}}))
+    tmp_r1=(${tmp[@]/%/_R1.fastq.gz})
+    i=0;for fl in ${tmp_r1[@]};do [[ ! -f $fl ]] && tmp_r1[$i]=${fl/_R1./.};i=$[i+1];echo $i; done 
+    echo "cat ${tmp_r1[@]} > $fq & sleep 1" | bash
+fi
+wait 
 
 
 # parameters
@@ -43,7 +62,7 @@ outdir="${WORKDIR}${INPREFIX}"; mkdir -p $outdir
 # Step 1
 ############################################################
 fastq_input="-fastq1 ${fastq}"
-[[ "$ctl" = true ]] && fastq_input="-ctl_fastq1 ${fastq}"
+[[ "$ctl" = True ]] && fastq_input="-ctl_fastq1 ${fastq}"
 
 #final_stage="filt_bam"
 final_stage="xcor"
@@ -65,16 +84,17 @@ wait
 # Step 2
 ############################################################
 
-if [ "$ctl" = true ]
+if [ "$ctl" = True ]
 then
     runFastQC_screen_se.sh $INPREFIX
     results_transfer.sh $INPREFIX $(whoami)
+    touch ~/data/outputs/libQCs/${INPREFIX}/.finished.txt    
     exit 0 # no step 2 for ctl
 fi
 
 [[ ! -z ${no_peak+x} ]] &&  exit 0 # no step 2 if -v no_peak
 
-ctl_id=$(cat $samples | grep true -n |cut -d':' -f1)
+ctl_id=$(cat $samples | grep True -n |cut -d':' -f1)
 ctl_id=$[$ctl_id-1] #0-based index
 ctl_name=${samplenames[${ctl_id}*3]}
 input_dir="${WORKDIR}${ctl_name}/align"; 
@@ -108,7 +128,6 @@ if [ -n $snap ];then
     export PATH=$PATH:/projects/ps-epigen/software/SNAP-CHIP_epicypher
     bash epicypher.sh -i $fastq -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}.fastq.gz.snap.cnt.tab & sleep 1
 fi
-
 wait
 
 touch ~/data/outputs/libQCs/${INPREFIX}/.finished.txt
