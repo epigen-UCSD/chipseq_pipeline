@@ -113,6 +113,7 @@ bds /projects/ps-epigen/software/chipseq_pipeline/chipseq.bds \
     -nth $PBS_NP \
     -out_dir $outdir \
     -species $genome \
+    -extsize_macs2 100 \
     $tag_input 
 
 wait 
