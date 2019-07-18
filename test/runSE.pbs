@@ -1,8 +1,8 @@
 #!/bin/bash
-#PBS -q condo
+#PBS -q hotel
 #PBS -N chipseq
 #PBS -l nodes=1:ppn=16
-#PBS -l walltime=08:00:00
+#PBS -l walltime=16:00:00
 #PBS -o /home/zhc268/logs/chipseq.out
 #PBS -e /home/zhc268/logs/chipseq.err
 #PBS -V
@@ -26,9 +26,9 @@ FASTQDIR="/projects/ps-epigen/seqdata/"
 samplenames=(`cat $samples`)
 snap='true'
 
-INPREFIX=${samplenames[${PBS_ARRAYID}*3]} #index start from 0
-genome=${samplenames[${PBS_ARRAYID}*3+1]}
-ctl=${samplenames[${PBS_ARRAYID}*3+2]} #control or treatment
+INPREFIX=${samplenames[${PBS_ARRAYID}*4]} #index start from 0
+genome=${samplenames[${PBS_ARRAYID}*4+1]}
+ctl=${samplenames[${PBS_ARRAYID}*4+3]} #control or treatment
 
 
 # split name into subnames
@@ -46,7 +46,7 @@ then
     sub_libs=($(echo ${tmp[@]:2}| sed 's/_1 / /g'))
     tmp=($(echo ${sub_libs[@]./#/${FASTQDIR}}))
     tmp_r1=(${tmp[@]/%/_R1.fastq.gz})
-    i=0;for fl in ${tmp_r1[@]};do [[ ! -f $fl ]] && tmp_r1[$i]=${fl/_R1./.};i=$[i+1];echo $i; done 
+    i=0;for fl in ${tmp_r1[@]};do [[ ! -f $fl ]] && tmp_r1[$i]=${fl/_R1./.};i=$[i+1];echo cat read_$i; done 
     echo "cat ${tmp_r1[@]} > $fastq & sleep 1" | bash
 fi
 wait 
@@ -96,10 +96,10 @@ fi
 
 ctl_id=$(cat $samples | grep True -n |cut -d':' -f1)
 ctl_id=$[$ctl_id-1] #0-based index
-ctl_name=${samplenames[${ctl_id}*3]}
+ctl_name=${samplenames[${ctl_id}*4]}
 input_dir="${WORKDIR}${ctl_name}/align"; 
-ctl_prefix="$input_dir/ctl1/${samplenames[${ctl_id}*3]}" #index start from 0
-tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*3]}" #index start from 0
+ctl_prefix="$input_dir/ctl1/${samplenames[${ctl_id}*4]}" #index start from 0
+tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*4]}" #index start from 0
 #tag_suffix="_R1.PE2SE.nodup.tagAlign.gz"
 tag_suffix=".nodup.bam"
 #tag_input="-tag ${tr_prefix}${tag_suffix} -ctl_tag ${ctl_prefix}${tag_suffix}"
@@ -124,9 +124,10 @@ wait
 runFastQC_screen_se.sh $INPREFIX
 results_transfer.sh $INPREFIX  $(whoami)
 
+source activate bds_atac
 if [ -n $snap ];then
     export PATH=$PATH:/projects/ps-epigen/software/SNAP-CHIP_epicypher
-    bash epicypher.sh -i $fastq -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}.fastq.gz.snap.cnt.tab & sleep 1
+    bash epicypher.sh -i $fastq -m 2 -k true -o $outdir/qc/ 1 | tee /projects/ps-epigen/outputs/libQCs/${INPREFIX}/${INPREFIX}.fastq.gz.snap.cnt.tab & sleep 1
 fi
 wait
 

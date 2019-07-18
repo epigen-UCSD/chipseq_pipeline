@@ -24,9 +24,10 @@ FASTQDIR="/projects/ps-epigen/seqdata/"
 samplenames=(`cat $samples`)
 snap='true'
 
-INPREFIX=${samplenames[${PBS_ARRAYID}*3]} #index start from 0
-genome=${samplenames[${PBS_ARRAYID}*3+1]}
-ctl=${samplenames[${PBS_ARRAYID}*3+2]} #control or treatment
+INPREFIX=${samplenames[${PBS_ARRAYID}*4]} #index start from 0
+genome=${samplenames[${PBS_ARRAYID}*4+1]}
+pe=${samplenames[${PBS_ARRAYID}*4+2]} #control or treatment
+ctl=${samplenames[${PBS_ARRAYID}*4+3]} #control or treatment
 fastq1="${FASTQDIR}/${INPREFIX}_R1.fastq.gz"
 fastq2="${FASTQDIR}/${INPREFIX}_R2.fastq.gz"
 [[ ! -f $fastq1 ]] && { echo "fastq1 not found"; exit 0; }
@@ -44,7 +45,7 @@ outdir="${WORKDIR}${INPREFIX}"; mkdir -p $outdir
 # Step 1
 ############################################################
 fastq_input="-fastq1_1 ${fastq1} -fastq1_2 ${fastq2}"
-[[ "$ctl" = true ]] && fastq_input="-ctl_fastq1_1 ${fastq1} -ctl_fastq1_2 ${fastq2}"
+[[ "$ctl" = True ]] && fastq_input="-ctl_fastq1_1 ${fastq1} -ctl_fastq1_2 ${fastq2}"
 
 #final_stage="filt_bam"
 final_stage="xcor"
@@ -67,7 +68,7 @@ wait
 # Step 2
 ############################################################
 
-if [ "$ctl" = true ]
+if [ "$ctl" = True ]
 then
     runFastQC_screen.sh $INPREFIX
     results_transfer.sh $INPREFIX $(whoami)
@@ -76,7 +77,7 @@ fi
 
 [[ ! -z ${no_peak+x} ]] &&  exit 0 # no step 2 if -v no_peak
 
-ctl_id=$(cat $samples | grep true -n |cut -d':' -f1)
+ctl_id=$(cat $samples | grep True -n |cut -d':' -f1)
 ctl_id=$[$ctl_id-1] #0-based index
 ctl_name=${samplenames[${ctl_id}*3]}
 input_dir="${WORKDIR}${ctl_name}/align"; 

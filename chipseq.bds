@@ -193,7 +193,7 @@ void read_conf_chipseq() {
 	print( "Generate anonymized filt. bam\t\t: $anon_filt_bam\n")
 	print( "Peak caller for IDR analysis\t\t: $peak_caller\n")
 	print( "Control rep. depth ratio\t\t: $ctl_depth_ratio\n" )
-	// print( "Specified fraglen (0:auto)\t\t: $fraglen\n")
+	print( "Specified fraglen (0:auto)\t\t: $fraglen\n")
 	print( "Scoring column for IDR\t\t\t: $idr_rank\n")
 	print( "IDR threshold\t\t\t\t: $idr_thresh\n" )
 	print( "Force to use pooled ctl\t\t\t: $use_pooled_ctl\n")
