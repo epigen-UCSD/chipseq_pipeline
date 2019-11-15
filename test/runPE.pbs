@@ -80,10 +80,10 @@ fi
 
 ctl_id=$(cat $samples | grep True -n |cut -d':' -f1)
 ctl_id=$[$ctl_id-1] #0-based index
-ctl_name=${samplenames[${ctl_id}*3]}
+ctl_name=${samplenames[${ctl_id}*4]}
 input_dir="${WORKDIR}${ctl_name}/align"; 
 ctl_bam=$(find $input_dir -name "*.nodup.bam")
-tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*3]}" #index start from 0
+tr_prefix="$outdir/align/rep1/${samplenames[${PBS_ARRAYID}*4]}" #index start from 0
 tag_suffix="_R1.PE2SE.nodup.bam"
 tag_input="-filt_bam ${tr_prefix}${tag_suffix} -ctl_filt_bam ${ctl_bam}"
 
@@ -111,9 +111,10 @@ if [ -n $snap ];then
     export PATH=$PATH:/projects/ps-epigen/software/SNAP-CHIP_epicypher
     bash epicypher.sh -i $fastq1 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}_R1.fastq.gz.snap.cnt.tab &
     bash epicypher.sh -i $fastq2 -m 2 -k true -o /projects/ps-epigen/outputs/libQCs/${INPREFIX}/ 1 | tee /projects/ps-epigen//outputs/libQCs/${INPREFIX}/${INPREFIX}_R2.fastq.gz.snap.cnt.tab
+    wait
 fi
 
-wait
+
 
 touch ~/data/outputs/libQCs/${INPREFIX}/.finished.txt
 
