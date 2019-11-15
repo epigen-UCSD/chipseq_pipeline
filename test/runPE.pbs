@@ -14,6 +14,7 @@
 # Step 1: process tr & ctl equally before peak calling
 # Step 2: peak calling 
 
+# -v samples, snap(optional)
 source activate aquas_chipseq
 
 
@@ -22,7 +23,7 @@ WORKDIR="/oasis/tscc/scratch/$(whoami)/outputs/"
 FASTQDIR="/projects/ps-epigen/seqdata/"
 
 samplenames=(`cat $samples`)
-snap='true'
+##snap='true'
 
 INPREFIX=${samplenames[${PBS_ARRAYID}*4]} #index start from 0
 genome=${samplenames[${PBS_ARRAYID}*4+1]}
